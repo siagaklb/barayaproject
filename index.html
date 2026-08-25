@@ -1,0 +1,2348 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BARAYA FINANCE — Kontrol Keuangan Project</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+  // Fallback: jika CDN utama gagal (mis. koneksi/firewall memblokir jsdelivr), coba CDN cadangan.
+  if (typeof Chart === 'undefined') {
+    document.write('<scr' + 'ipt src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></scr' + 'ipt>');
+  }
+</script>
+<style>
+/* =====================================================================
+   BARAYA FINANCE — Design Tokens
+   ===================================================================== */
+:root{
+  --bg-void:#070912;
+  --bg-base:#0b0f1c;
+  --bg-panel:#111629;
+  --bg-panel-2:#161d34;
+  --bg-elevated:#1b2340;
+  --border-soft:rgba(255,255,255,.06);
+  --border-strong:rgba(120,170,255,.18);
+
+  --accent-cyan:#00e5ff;
+  --accent-cyan-dim:#00b8cc;
+  --accent-violet:#8b7bff;
+  --accent-green:#00e6a8;
+  --accent-amber:#ffb020;
+  --accent-red:#ff4d6d;
+
+  --text-primary:#eef1fb;
+  --text-secondary:#9aa3c2;
+  --text-tertiary:#5c6488;
+
+  --font-display:'Space Grotesk',sans-serif;
+  --font-body:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:20px;
+
+  --shadow-glow-cyan:0 0 24px rgba(0,229,255,.15);
+  --shadow-panel:0 8px 32px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--bg-void);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+
+/* ambient grid background */
+.grid-ambient{
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,229,255,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,255,.035) 1px, transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse 80% 60% at 30% 0%, black 30%, transparent 75%);
+}
+.glow-orb{
+  position:fixed; z-index:0; pointer-events:none; border-radius:50%;
+  filter:blur(120px); opacity:.16;
+}
+.glow-orb.one{ width:600px; height:600px; top:-200px; left:-100px; background:var(--accent-cyan); }
+.glow-orb.two{ width:500px; height:500px; bottom:-150px; right:-100px; background:var(--accent-violet); opacity:.12; }
+
+::-webkit-scrollbar{width:8px; height:8px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--bg-elevated); border-radius:8px;}
+::-webkit-scrollbar-thumb:hover{background:var(--accent-cyan-dim);}
+
+/* =====================================================================
+   Layout shell
+   ===================================================================== */
+.app-shell{ position:relative; z-index:1; display:flex; min-height:100vh; }
+
+/* --- Sidebar --- */
+.sidebar{
+  width:248px; flex-shrink:0;
+  background:linear-gradient(180deg, var(--bg-panel) 0%, var(--bg-base) 100%);
+  border-right:1px solid var(--border-soft);
+  display:flex; flex-direction:column;
+  position:sticky; top:0; height:100vh;
+  z-index:20;
+  transition:transform .3s ease;
+}
+.sidebar-brand{
+  padding:26px 22px 22px;
+  display:flex; align-items:center; gap:11px;
+  border-bottom:1px solid var(--border-soft);
+}
+.brand-mark{
+  width:34px; height:34px; border-radius:9px;
+  background:linear-gradient(135deg, var(--accent-cyan), var(--accent-violet));
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--font-display); font-weight:700; font-size:15px; color:#050810;
+  box-shadow:0 0 18px rgba(0,229,255,.35);
+  flex-shrink:0;
+}
+.brand-text{ font-family:var(--font-display); font-weight:700; font-size:16.5px; letter-spacing:.5px; }
+.brand-sub{ font-size:10px; color:var(--text-tertiary); letter-spacing:1.5px; font-family:var(--font-mono); margin-top:1px; }
+
+.nav-list{ list-style:none; padding:18px 12px; flex:1; }
+.nav-item{ margin-bottom:3px; }
+.nav-link{
+  display:flex; align-items:center; gap:12px;
+  padding:11px 14px; border-radius:var(--radius-sm);
+  color:var(--text-secondary); text-decoration:none; cursor:pointer;
+  font-size:13.5px; font-weight:500;
+  transition:all .18s ease; position:relative;
+  border:1px solid transparent;
+}
+.nav-link .nav-icon{ width:18px; height:18px; flex-shrink:0; opacity:.8; }
+.nav-link:hover{ background:var(--bg-panel-2); color:var(--text-primary); }
+.nav-link.active{
+  background:linear-gradient(90deg, rgba(0,229,255,.13), rgba(0,229,255,.02));
+  color:var(--accent-cyan);
+  border-color:var(--border-strong);
+}
+.nav-link.active .nav-icon{ opacity:1; filter:drop-shadow(0 0 4px rgba(0,229,255,.6)); }
+.nav-link.active::before{
+  content:''; position:absolute; left:-12px; top:50%; transform:translateY(-50%);
+  width:3px; height:20px; background:var(--accent-cyan); border-radius:2px;
+  box-shadow:0 0 10px var(--accent-cyan);
+}
+
+.nav-section-label{
+  font-size:10px; letter-spacing:1.6px; color:var(--text-tertiary);
+  padding:16px 14px 8px; font-family:var(--font-mono); text-transform:uppercase;
+}
+
+.sidebar-footer{
+  padding:16px 20px; border-top:1px solid var(--border-soft);
+  font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono);
+  display:flex; align-items:center; gap:8px;
+}
+.status-dot{ width:7px; height:7px; border-radius:50%; background:var(--accent-green); box-shadow:0 0 8px var(--accent-green); flex-shrink:0; }
+.status-dot.offline{ background:var(--accent-red); box-shadow:0 0 8px var(--accent-red); }
+
+/* --- Main --- */
+.main-area{ flex:1; min-width:0; display:flex; flex-direction:column; }
+
+.topbar{
+  height:70px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 28px;
+  border-bottom:1px solid var(--border-soft);
+  background:rgba(11,15,28,.7); backdrop-filter:blur(12px);
+  position:sticky; top:0; z-index:15;
+  gap:20px;
+}
+.topbar-left{ display:flex; align-items:center; gap:16px; min-width:0;}
+.page-title{ font-family:var(--font-display); font-size:19px; font-weight:600; white-space:nowrap; }
+.page-subtitle{ font-size:12px; color:var(--text-tertiary); margin-top:1px; }
+
+.menu-toggle{
+  display:none; width:36px; height:36px; border-radius:8px; border:1px solid var(--border-soft);
+  background:var(--bg-panel-2); color:var(--text-secondary); align-items:center; justify-content:center; cursor:pointer;
+  flex-shrink:0;
+}
+
+.project-selector{
+  display:flex; align-items:center; gap:10px;
+  background:var(--bg-panel-2); border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm); padding:8px 14px;
+  min-width:220px;
+}
+.project-selector label{ font-size:10px; color:var(--text-tertiary); font-family:var(--font-mono); letter-spacing:.5px; text-transform:uppercase;}
+.project-selector select{
+  background:transparent; border:none; color:var(--text-primary); font-family:var(--font-body);
+  font-size:13.5px; font-weight:600; outline:none; cursor:pointer; width:100%;
+}
+.project-selector select option{ background:var(--bg-panel); color:var(--text-primary); }
+
+.topbar-right{ display:flex; align-items:center; gap:12px; flex-shrink:0; }
+.icon-btn{
+  width:38px; height:38px; border-radius:9px; border:1px solid var(--border-soft);
+  background:var(--bg-panel-2); color:var(--text-secondary); display:flex; align-items:center; justify-content:center;
+  cursor:pointer; transition:all .15s ease;
+}
+.icon-btn:hover{ color:var(--accent-cyan); border-color:var(--border-strong); }
+
+.content{ flex:1; padding:28px; max-width:1500px; width:100%; margin:0 auto; }
+
+.page{ display:none; animation:fadeIn .35s ease; }
+.page.active{ display:block; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+/* =====================================================================
+   Components
+   ===================================================================== */
+.kpi-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; position:relative; }
+.kpi-card{
+  background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:var(--radius-md);
+  padding:20px 22px; position:relative; overflow:hidden;
+  transition:transform .2s ease, border-color .2s ease;
+}
+.kpi-card:hover{ transform:translateY(-2px); border-color:var(--border-strong); }
+.kpi-card::after{
+  content:''; position:absolute; top:0; right:0; width:110px; height:110px;
+  background:radial-gradient(circle, var(--kpi-glow, rgba(0,229,255,.12)) 0%, transparent 70%);
+  pointer-events:none;
+}
+.kpi-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.kpi-label{ font-size:11.5px; color:var(--text-tertiary); font-family:var(--font-mono); letter-spacing:.8px; text-transform:uppercase; }
+.kpi-icon{ width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.kpi-value{ font-family:var(--font-mono); font-size:26px; font-weight:700; letter-spacing:-.5px; line-height:1.1; }
+.kpi-delta{ display:flex; align-items:center; gap:5px; margin-top:10px; font-size:12px; font-weight:600; }
+.kpi-delta.up{ color:var(--accent-green); }
+.kpi-delta.down{ color:var(--accent-red); }
+.kpi-delta.neutral{ color:var(--text-tertiary); }
+
+.kpi-card.income .kpi-icon{ background:rgba(0,229,255,.12); color:var(--accent-cyan); }
+.kpi-card.expense .kpi-icon{ background:rgba(255,77,109,.12); color:var(--accent-red); }
+.kpi-card.profit .kpi-icon{ background:rgba(0,230,168,.12); color:var(--accent-green); }
+.kpi-card.pct .kpi-icon{ background:rgba(139,123,255,.12); color:var(--accent-violet); }
+
+.panel{
+  background:var(--bg-panel); border:1px solid var(--border-soft); border-radius:var(--radius-md);
+  padding:22px; margin-bottom:20px;
+}
+.panel-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px; }
+.panel-title{ font-family:var(--font-display); font-size:15.5px; font-weight:600; display:flex; align-items:center; gap:9px; }
+.panel-title .dot{ width:6px; height:6px; border-radius:50%; background:var(--accent-cyan); box-shadow:0 0 6px var(--accent-cyan); }
+.panel-sub{ font-size:11.5px; color:var(--text-tertiary); margin-top:2px; }
+
+.row-2{ display:grid; grid-template-columns:1.6fr 1fr; gap:20px; }
+.row-3{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+
+.chart-wrap{ position:relative; height:280px; }
+.chart-wrap.small{ height:220px; }
+
+/* --- Buttons --- */
+.btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:9px 16px; border-radius:9px; border:1px solid var(--border-soft);
+  background:var(--bg-panel-2); color:var(--text-primary); font-family:var(--font-body);
+  font-size:13px; font-weight:600; cursor:pointer; transition:all .15s ease; white-space:nowrap;
+}
+.btn:hover{ border-color:var(--border-strong); }
+.btn-primary{
+  background:linear-gradient(135deg, var(--accent-cyan), #00a8c4);
+  color:#04121a; border:none; box-shadow:0 0 0 rgba(0,229,255,0);
+}
+.btn-primary:hover{ box-shadow:0 4px 20px rgba(0,229,255,.3); transform:translateY(-1px); }
+.btn-ghost{ background:transparent; }
+.btn-danger-ghost{ background:transparent; color:var(--accent-red); border-color:rgba(255,77,109,.25); }
+.btn-danger-ghost:hover{ background:rgba(255,77,109,.08); border-color:var(--accent-red); }
+.btn-sm{ padding:6px 11px; font-size:12px; border-radius:7px; }
+.btn svg{ width:15px; height:15px; }
+
+/* --- Filters bar --- */
+.filter-bar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+.filter-input, .filter-select{
+  background:var(--bg-panel-2); border:1px solid var(--border-soft); color:var(--text-primary);
+  padding:9px 12px; border-radius:8px; font-size:13px; font-family:var(--font-body); outline:none;
+}
+.filter-input:focus, .filter-select:focus{ border-color:var(--accent-cyan); }
+.search-box{ position:relative; flex:1; min-width:200px; max-width:320px; }
+.search-box input{ width:100%; padding-left:36px; }
+.search-box svg{ position:absolute; left:11px; top:50%; transform:translateY(-50%); width:15px; height:15px; color:var(--text-tertiary); }
+
+/* --- Table --- */
+.table-wrap{ overflow-x:auto; border-radius:var(--radius-sm); border:1px solid var(--border-soft); }
+table{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
+thead th{
+  text-align:left; padding:12px 16px; background:var(--bg-panel-2);
+  font-family:var(--font-mono); font-size:10.5px; letter-spacing:.8px; text-transform:uppercase;
+  color:var(--text-tertiary); font-weight:600; border-bottom:1px solid var(--border-soft);
+  white-space:nowrap;
+}
+tbody td{ padding:13px 16px; border-bottom:1px solid var(--border-soft); color:var(--text-secondary); vertical-align:middle; }
+tbody tr:last-child td{ border-bottom:none; }
+tbody tr{ transition:background .12s ease; }
+tbody tr:hover{ background:rgba(0,229,255,.03); }
+td.num{ font-family:var(--font-mono); color:var(--text-primary); text-align:right; font-weight:500; }
+td.strong{ color:var(--text-primary); font-weight:600; }
+.tag{
+  display:inline-flex; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;
+  background:rgba(0,229,255,.1); color:var(--accent-cyan); border:1px solid rgba(0,229,255,.2);
+}
+.tag.green{ background:rgba(0,230,168,.1); color:var(--accent-green); border-color:rgba(0,230,168,.2); }
+.tag.red{ background:rgba(255,77,109,.1); color:var(--accent-red); border-color:rgba(255,77,109,.2); }
+.tag.amber{ background:rgba(255,176,32,.1); color:var(--accent-amber); border-color:rgba(255,176,32,.2); }
+.tag.violet{ background:rgba(139,123,255,.1); color:var(--accent-violet); border-color:rgba(139,123,255,.2); }
+.btn-approve{
+  background:linear-gradient(135deg, var(--accent-green), #00b884); color:#052018; border:none;
+  font-weight:700; box-shadow:0 0 14px rgba(0,230,168,.25);
+}
+.btn-approve:hover{ filter:brightness(1.08); }
+.btn-approve:disabled{ opacity:.5; cursor:not-allowed; filter:none; box-shadow:none; }
+.plan-hint{
+  font-size:11.5px; color:var(--text-tertiary); font-family:var(--font-mono);
+  background:rgba(139,123,255,.06); border:1px solid rgba(139,123,255,.15);
+  border-radius:var(--radius-sm); padding:9px 12px; margin-top:2px; line-height:1.5;
+}
+.estimasi-readout{
+  display:flex; gap:14px; flex-wrap:wrap; margin-top:2px;
+}
+.estimasi-readout .er-item{
+  flex:1; min-width:140px; background:var(--bg-elevated); border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm); padding:10px 12px;
+}
+.estimasi-readout .er-label{ font-size:10.5px; color:var(--text-tertiary); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.5px; }
+.estimasi-readout .er-val{ font-family:var(--font-mono); font-weight:600; font-size:15px; margin-top:3px; }
+.row-actions{ display:flex; gap:6px; justify-content:flex-end; }
+.icon-btn-sm{
+  width:28px; height:28px; border-radius:6px; border:1px solid var(--border-soft); background:transparent;
+  color:var(--text-tertiary); display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.icon-btn-sm:hover{ color:var(--accent-cyan); border-color:var(--border-strong); }
+.icon-btn-sm.del:hover{ color:var(--accent-red); border-color:rgba(255,77,109,.3); }
+.icon-btn-sm svg{ width:14px; height:14px; }
+
+.empty-state{ text-align:center; padding:50px 20px; color:var(--text-tertiary); }
+.empty-state svg{ width:44px; height:44px; margin-bottom:12px; opacity:.4; }
+.empty-state p{ font-size:13px; }
+
+/* --- Progress bar (budget usage) --- */
+.progress-track{ height:6px; border-radius:6px; background:var(--bg-elevated); overflow:hidden; }
+.progress-fill{ height:100%; border-radius:6px; background:linear-gradient(90deg, var(--accent-cyan), var(--accent-violet)); transition:width .6s ease; }
+.progress-fill.warn{ background:linear-gradient(90deg, var(--accent-amber), var(--accent-red)); }
+
+/* --- Project cards (analisa/dashboard list) --- */
+.proj-rank-list{ display:flex; flex-direction:column; gap:10px; }
+.proj-rank-item{
+  display:flex; align-items:center; gap:14px; padding:13px 16px;
+  background:var(--bg-panel-2); border:1px solid var(--border-soft); border-radius:10px;
+}
+.proj-rank-num{
+  font-family:var(--font-mono); font-size:12px; color:var(--text-tertiary); width:22px; flex-shrink:0;
+}
+.proj-rank-info{ flex:1; min-width:0; }
+.proj-rank-name{ font-size:13.5px; font-weight:600; color:var(--text-primary); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.proj-rank-meta{ font-size:11px; color:var(--text-tertiary); margin-top:2px; }
+.proj-rank-val{ font-family:var(--font-mono); font-weight:700; font-size:14px; text-align:right; flex-shrink:0; }
+
+/* --- Modal --- */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(4,6,14,.7); backdrop-filter:blur(4px);
+  display:none; align-items:center; justify-content:center; z-index:100; padding:20px;
+}
+.modal-overlay.active{ display:flex; }
+.modal{
+  background:var(--bg-panel); border:1px solid var(--border-strong); border-radius:var(--radius-lg);
+  width:100%; max-width:480px; max-height:90vh; overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.5), 0 0 0 1px rgba(0,229,255,.05);
+  animation:modalIn .25s ease;
+}
+@keyframes modalIn{ from{opacity:0; transform:scale(.96) translateY(8px);} to{opacity:1; transform:scale(1) translateY(0);} }
+.modal-header{ display:flex; align-items:center; justify-content:space-between; padding:20px 22px; border-bottom:1px solid var(--border-soft); }
+.modal-title{ font-family:var(--font-display); font-size:16px; font-weight:600; }
+.modal-close{ width:30px; height:30px; border-radius:8px; border:none; background:var(--bg-panel-2); color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.modal-body{ padding:22px; }
+.form-group{ margin-bottom:16px; }
+.form-group label{ display:block; font-size:12px; color:var(--text-secondary); margin-bottom:7px; font-weight:600; }
+.form-group input, .form-group select, .form-group textarea{
+  width:100%; background:var(--bg-panel-2); border:1px solid var(--border-soft); color:var(--text-primary);
+  padding:10px 13px; border-radius:9px; font-size:13.5px; font-family:var(--font-body); outline:none;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus{ border-color:var(--accent-cyan); }
+.form-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.modal-footer{ display:flex; justify-content:flex-end; gap:10px; padding:18px 22px; border-top:1px solid var(--border-soft); }
+
+/* --- Toast --- */
+.toast-container{ position:fixed; top:20px; right:20px; z-index:200; display:flex; flex-direction:column; gap:10px; }
+.toast{
+  background:var(--bg-elevated); border:1px solid var(--border-strong); border-radius:10px;
+  padding:13px 18px; display:flex; align-items:center; gap:10px; font-size:13px; font-weight:500;
+  box-shadow:0 8px 24px rgba(0,0,0,.4); min-width:260px; animation:toastIn .3s ease;
+}
+@keyframes toastIn{ from{opacity:0; transform:translateX(30px);} to{opacity:1; transform:translateX(0);} }
+.toast.success{ border-color:rgba(0,230,168,.35); }
+.toast.error{ border-color:rgba(255,77,109,.35); }
+.toast-icon{ flex-shrink:0; width:18px; height:18px; }
+.toast.success .toast-icon{ color:var(--accent-green); }
+.toast.error .toast-icon{ color:var(--accent-red); }
+
+/* --- Loading --- */
+.loader-overlay{
+  position:fixed; inset:0; background:var(--bg-void); z-index:300;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  transition:opacity .4s ease;
+}
+.loader-ring{
+  width:52px; height:52px; border-radius:50%; border:3px solid var(--bg-elevated);
+  border-top-color:var(--accent-cyan); animation:spin 0.9s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.loader-text{ font-family:var(--font-mono); font-size:12px; color:var(--text-tertiary); letter-spacing:1px; }
+.skeleton{ background:linear-gradient(90deg, var(--bg-panel-2) 25%, var(--bg-elevated) 50%, var(--bg-panel-2) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:6px; }
+@keyframes shimmer{ 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+
+/* --- Config banner --- */
+.config-banner{
+  background:linear-gradient(90deg, rgba(255,176,32,.1), rgba(255,176,32,.02));
+  border:1px solid rgba(255,176,32,.3); border-radius:12px; padding:16px 20px;
+  display:flex; align-items:flex-start; gap:12px; margin-bottom:22px;
+}
+.config-banner svg{ width:20px; height:20px; color:var(--accent-amber); flex-shrink:0; margin-top:1px; }
+.config-banner-text{ font-size:13px; color:var(--text-secondary); line-height:1.6; }
+.config-banner code{ background:var(--bg-void); padding:2px 6px; border-radius:4px; font-family:var(--font-mono); font-size:12px; color:var(--accent-amber); }
+
+/* Report specific */
+.report-summary-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:20px; }
+.report-mini-card{ background:var(--bg-panel-2); border:1px solid var(--border-soft); border-radius:10px; padding:16px; }
+.report-mini-label{ font-size:11px; color:var(--text-tertiary); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.6px; }
+.report-mini-val{ font-family:var(--font-mono); font-size:20px; font-weight:700; margin-top:6px; }
+
+/* Responsive */
+@media (max-width: 1180px){
+  .kpi-grid{ grid-template-columns:repeat(2,1fr); }
+  .row-2{ grid-template-columns:1fr; }
+  .row-3{ grid-template-columns:1fr; }
+  .report-summary-grid{ grid-template-columns:1fr; }
+}
+@media (max-width: 860px){
+  .sidebar{ position:fixed; left:0; transform:translateX(-100%); box-shadow:0 0 40px rgba(0,0,0,.5); }
+  .sidebar.open{ transform:translateX(0); }
+  .menu-toggle{ display:flex; }
+  .project-selector{ min-width:150px; }
+  .page-subtitle{ display:none; }
+  .content{ padding:18px; }
+  .kpi-grid{ grid-template-columns:1fr; }
+  .form-row{ grid-template-columns:1fr; }
+}
+/* =====================================================================
+   PRINT / EXPORT PDF — Laporan
+   ===================================================================== */
+.print-only{ display:none; }
+
+@media print{
+  @page{ size: A4 portrait; margin: 14mm 12mm; }
+
+  html, body{ background:#ffffff !important; height:auto; overflow:visible; }
+  .grid-ambient, .glow-orb, .loader-overlay, .toast-container,
+  .sidebar, .topbar, .modal-overlay{ display:none !important; }
+
+  .app-shell{ display:block; min-height:0; }
+  .main-area{ display:block; }
+  .content{ padding:0; margin:0; }
+
+  /* Sembunyikan semua halaman kecuali Laporan */
+  .page{ display:none !important; }
+  .page#page-laporan{ display:block !important; }
+
+  /* Sembunyikan elemen kontrol yang tidak relevan untuk dicetak */
+  .no-print{ display:none !important; }
+  .print-only{ display:block !important; }
+
+  #printableReport{
+    background:#ffffff !important; border:none !important; box-shadow:none !important;
+    padding:0 !important; border-radius:0 !important;
+  }
+
+  .report-print-header{
+    margin-bottom:18px; padding-bottom:14px; border-bottom:2px solid #111629;
+  }
+  .report-print-brand{
+    font-family:var(--font-display); font-weight:700; font-size:13px; letter-spacing:2px;
+    color:#111629; text-transform:uppercase;
+  }
+  .report-print-title{
+    font-family:var(--font-display); font-weight:700; font-size:20px; color:#0b0f1c; margin-top:4px;
+  }
+  .report-print-meta{
+    font-family:var(--font-mono); font-size:11px; color:#444; margin-top:6px;
+  }
+
+  .report-summary-grid{
+    display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; margin-bottom:18px;
+  }
+  .report-mini-card{
+    background:#f4f5f9 !important; border:1px solid #d8dbe6 !important;
+    padding:10px 12px !important; border-radius:8px !important;
+  }
+  .report-mini-label{ color:#555 !important; font-size:10px !important; }
+  .report-mini-val{ color:#111629 !important; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  #laporanIncome{ color:#0077a3 !important; }
+  #laporanExpense{ color:#b8123f !important; }
+  #laporanProfit{ color:#00805e !important; }
+
+  .table-wrap{ overflow:visible !important; border:none !important; }
+  table{ width:100% !important; border-collapse:collapse !important; }
+  thead{ display:table-header-group; } /* ulangi header tabel di tiap halaman cetak */
+  tr{ page-break-inside:avoid; }
+  th{
+    background:#111629 !important; color:#fff !important; font-size:10px !important;
+    padding:8px 10px !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;
+  }
+  td{
+    color:#1a1a1a !important; font-size:11px !important; padding:7px 10px !important;
+    border-bottom:1px solid #e2e4ec !important;
+  }
+  td.num{ color:#1a1a1a !important; }
+  .tag{ border:1px solid #999 !important; color:#333 !important; background:transparent !important; }
+
+  a[href]:after{ content:""; }
+}
+</style>
+</head>
+<body>
+
+<div class="grid-ambient"></div>
+<div class="glow-orb one"></div>
+<div class="glow-orb two"></div>
+
+<!-- Loader -->
+<div class="loader-overlay" id="loaderOverlay">
+  <div class="loader-ring"></div>
+  <div class="loader-text">MEMUAT DATA KEUANGAN...</div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="app-shell">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark">N</div>
+      <div>
+        <div class="brand-text">BARAYA FINANCE</div>
+        <div class="brand-sub">PROJECT CONTROL</div>
+      </div>
+    </div>
+
+    <ul class="nav-list">
+      <li class="nav-section-label">Utama</li>
+      <li class="nav-item">
+        <a class="nav-link active" data-page="dashboard">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Dashboard
+        </a>
+      </li>
+      <li class="nav-section-label">Transaksi</li>
+      <li class="nav-item">
+        <a class="nav-link" data-page="pemasukan">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          Pemasukan
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-page="pengeluaran">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          Pengeluaran
+        </a>
+      </li>
+      <li class="nav-section-label">Wawasan</li>
+      <li class="nav-item">
+        <a class="nav-link" data-page="analisa">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+          Analisa
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-page="laporan">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6M9 9h1"/></svg>
+          Laporan
+        </a>
+      </li>
+      <li class="nav-section-label">Data</li>
+      <li class="nav-item">
+        <a class="nav-link" data-page="perencanaan">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+          Perencanaan Project
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-page="projects">
+          <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+          Daftar Project
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <span class="status-dot" id="connStatusDot"></span>
+      <span id="connStatusText">Menghubungkan...</span>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <div class="main-area">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menuToggle">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+        </button>
+        <div>
+          <div class="page-title" id="pageTitle">Dashboard</div>
+          <div class="page-subtitle" id="pageSubtitle">Ringkasan performa keuangan seluruh project</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="project-selector">
+          <label>Project</label>
+          <select id="globalProjectSelect"><option value="ALL">Semua Project</option></select>
+        </div>
+        <button class="icon-btn" id="refreshBtn" title="Muat ulang data">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+
+      <!-- ===================== PAGE: DASHBOARD ===================== -->
+      <section class="page active" id="page-dashboard">
+        <div class="config-banner" id="configBanner" style="display:none;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <div class="config-banner-text">
+            <strong>Belum terhubung ke backend.</strong> Buka file <code>index.html</code>, cari variabel <code>API_URL</code> di bagian bawah, lalu isi dengan URL Web App Google Apps Script Anda. Saat ini aplikasi menampilkan data contoh (mode demo).
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card income" style="--kpi-glow: rgba(0,229,255,.15);">
+            <div class="kpi-top">
+              <span class="kpi-label">Total Pemasukan</span>
+              <div class="kpi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+            </div>
+            <div class="kpi-value" id="kpiIncome">Rp 0</div>
+            <div class="kpi-delta neutral" id="kpiIncomeDelta">— transaksi tercatat</div>
+          </div>
+          <div class="kpi-card expense" style="--kpi-glow: rgba(255,77,109,.15);">
+            <div class="kpi-top">
+              <span class="kpi-label">Total Pengeluaran</span>
+              <div class="kpi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12l7 7 7-7"/></svg></div>
+            </div>
+            <div class="kpi-value" id="kpiExpense">Rp 0</div>
+            <div class="kpi-delta neutral" id="kpiExpenseDelta">— transaksi tercatat</div>
+          </div>
+          <div class="kpi-card profit" style="--kpi-glow: rgba(0,230,168,.15);">
+            <div class="kpi-top">
+              <span class="kpi-label">Profit Bersih</span>
+              <div class="kpi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M8 12h8"/></svg></div>
+            </div>
+            <div class="kpi-value" id="kpiProfit">Rp 0</div>
+            <div class="kpi-delta neutral" id="kpiProfitDelta">Pemasukan − Pengeluaran</div>
+          </div>
+          <div class="kpi-card pct" style="--kpi-glow: rgba(139,123,255,.15);">
+            <div class="kpi-top">
+              <span class="kpi-label">Persentase Profit</span>
+              <div class="kpi-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"/><path d="M18 12l-5 5-3-3-4 4"/></svg></div>
+            </div>
+            <div class="kpi-value" id="kpiPct">0%</div>
+            <div class="kpi-delta neutral" id="kpiPctDelta">dari total pemasukan</div>
+          </div>
+        </div>
+
+        <div class="row-2">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title"><span class="dot"></span>Tren Arus Kas Bulanan</div>
+                <div class="panel-sub">Pemasukan vs Pengeluaran per bulan</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="chartTrend"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title"><span class="dot"></span>Komposisi Pengeluaran</div>
+                <div class="panel-sub">Berdasarkan kategori</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="chartExpenseDonut"></canvas></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title"><span class="dot"></span>Peringkat Profit per Project</div>
+              <div class="panel-sub">Diurutkan dari profit tertinggi</div>
+            </div>
+          </div>
+          <div class="proj-rank-list" id="dashboardProjRank"></div>
+        </div>
+      </section>
+
+      <!-- ===================== PAGE: PEMASUKAN ===================== -->
+      <section class="page" id="page-pemasukan">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title"><span class="dot"></span>Rincian Pemasukan</div>
+              <div class="panel-sub" id="pemasukanSummary">Total: Rp 0</div>
+            </div>
+            <button class="btn btn-primary" id="btnAddPemasukan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+              Tambah Pemasukan
+            </button>
+          </div>
+          <div class="filter-bar">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" class="filter-input" id="searchPemasukan" placeholder="Cari sumber / keterangan...">
+            </div>
+            <select class="filter-select" id="filterKategoriPemasukan"><option value="">Semua Kategori</option></select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Tanggal</th><th>Project</th><th>Sumber</th><th>Kategori</th><th>Keterangan</th><th style="text-align:right;">Jumlah</th><th></th></tr>
+              </thead>
+              <tbody id="tablePemasukan"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="emptyPemasukan" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+            <p>Belum ada data pemasukan untuk filter ini.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PAGE: PENGELUARAN ===================== -->
+      <section class="page" id="page-pengeluaran">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title"><span class="dot"></span>Rincian Pengeluaran</div>
+              <div class="panel-sub" id="pengeluaranSummary">Total: Rp 0</div>
+            </div>
+            <button class="btn btn-primary" id="btnAddPengeluaran">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+              Tambah Pengeluaran
+            </button>
+          </div>
+          <div class="filter-bar">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" class="filter-input" id="searchPengeluaran" placeholder="Cari deskripsi / keterangan...">
+            </div>
+            <select class="filter-select" id="filterKategoriPengeluaran"><option value="">Semua Kategori</option></select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Tanggal</th><th>Project</th><th>Deskripsi</th><th>Kategori</th><th>Keterangan</th><th style="text-align:right;">Jumlah</th><th></th></tr>
+              </thead>
+              <tbody id="tablePengeluaran"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="emptyPengeluaran" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            <p>Belum ada data pengeluaran untuk filter ini.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PAGE: ANALISA ===================== -->
+      <section class="page" id="page-analisa">
+        <div class="report-summary-grid">
+          <div class="report-mini-card">
+            <div class="report-mini-label">Total Pemasukan</div>
+            <div class="report-mini-val" id="analisaAvgIncome" style="color:var(--accent-cyan);">Rp 0</div>
+          </div>
+          <div class="report-mini-card">
+            <div class="report-mini-label">Total Pengeluaran</div>
+            <div class="report-mini-val" id="analisaAvgExpense" style="color:var(--accent-red);">Rp 0</div>
+          </div>
+          <div class="report-mini-card">
+            <div class="report-mini-label">Total Transaksi Tercatat</div>
+            <div class="report-mini-val" id="analisaTotalTx" style="color:var(--accent-violet);">0</div>
+          </div>
+        </div>
+
+        <div class="row-2">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title"><span class="dot"></span>Perbandingan Profit Antar Project</div>
+                <div class="panel-sub">Profit bersih tiap project</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="chartProjectCompare"></canvas></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title"><span class="dot"></span>Pemasukan vs Pengeluaran</div>
+                <div class="panel-sub">Berdasarkan kategori</div>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="chartCategoryCompare"></canvas></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title"><span class="dot"></span>Penggunaan Budget per Project</div>
+              <div class="panel-sub">Persentase pengeluaran terhadap budget yang dialokasikan</div>
+            </div>
+          </div>
+          <div id="budgetUsageList" style="display:flex; flex-direction:column; gap:16px;"></div>
+        </div>
+      </section>
+
+      <!-- ===================== PAGE: LAPORAN ===================== -->
+      <section class="page" id="page-laporan">
+        <div class="panel" id="printableReport">
+          <div class="print-only report-print-header">
+            <div class="report-print-brand">BARAYA FINANCE</div>
+            <div class="report-print-title">Laporan Keuangan Project</div>
+            <div class="report-print-meta" id="reportPrintMeta">Periode: — sampai —</div>
+          </div>
+          <div class="panel-header no-print">
+            <div>
+              <div class="panel-title"><span class="dot"></span>Laporan Keuangan</div>
+              <div class="panel-sub">Pilih rentang tanggal untuk menyusun laporan</div>
+            </div>
+            <button class="btn btn-ghost" id="btnPrintLaporan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z"/></svg>
+              Cetak / Ekspor PDF
+            </button>
+          </div>
+          <div class="filter-bar no-print">
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="date" class="filter-input" id="laporanStart">
+            </div>
+            <span style="color:var(--text-tertiary); font-size:13px;">sampai</span>
+            <div class="form-group" style="margin-bottom:0;">
+              <input type="date" class="filter-input" id="laporanEnd">
+            </div>
+            <button class="btn btn-primary btn-sm" id="btnTerapkanLaporan">Terapkan</button>
+          </div>
+
+          <div class="report-summary-grid">
+            <div class="report-mini-card">
+              <div class="report-mini-label">Total Pemasukan</div>
+              <div class="report-mini-val" id="laporanIncome" style="color:var(--accent-cyan);">Rp 0</div>
+            </div>
+            <div class="report-mini-card">
+              <div class="report-mini-label">Total Pengeluaran</div>
+              <div class="report-mini-val" id="laporanExpense" style="color:var(--accent-red);">Rp 0</div>
+            </div>
+            <div class="report-mini-card">
+              <div class="report-mini-label">Profit Bersih</div>
+              <div class="report-mini-val" id="laporanProfit" style="color:var(--accent-green);">Rp 0</div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Tanggal</th><th>Tipe</th><th>Project</th><th>Deskripsi</th><th>Kategori</th><th style="text-align:right;">Jumlah</th></tr>
+              </thead>
+              <tbody id="tableLaporan"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="emptyLaporan" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/></svg>
+            <p>Tidak ada transaksi pada rentang tanggal ini.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PAGE: PERENCANAAN PROJECT ===================== -->
+      <section class="page" id="page-perencanaan">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title"><span class="dot"></span>Perencanaan Project</div>
+              <div class="panel-sub">Susun rencana project sebelum disetujui dan berjalan</div>
+            </div>
+            <button class="btn btn-primary" id="btnAddPerencanaan">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+              Tambah Rencana Project
+            </button>
+          </div>
+          <div class="filter-bar">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <input type="text" class="filter-input" id="searchPerencanaan" placeholder="Cari nama project / client...">
+            </div>
+            <select class="filter-select" id="filterStatusPerencanaan">
+              <option value="">Semua Status</option>
+              <option value="Rencana">Rencana</option>
+              <option value="Approve">Approve</option>
+              <option value="Ditolak">Ditolak</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nama Project</th><th>Client</th><th>Tgl Penawaran</th>
+                  <th style="text-align:right;">Nilai Kontrak</th>
+                  <th style="text-align:right;">Estimasi Biaya</th>
+                  <th style="text-align:right;">Estimasi Profit</th>
+                  <th style="text-align:right;">Profit %</th>
+                  <th>Status</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="tablePerencanaan"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="emptyPerencanaan" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 11l3 3L22 4"/></svg>
+            <p>Belum ada rencana project untuk filter ini.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== PAGE: PROJECTS ===================== -->
+      <section class="page" id="page-projects">
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title"><span class="dot"></span>Daftar Project</div>
+              <div class="panel-sub">Kelola project yang sedang berjalan maupun selesai</div>
+            </div>
+            <button class="btn btn-primary" id="btnAddProject">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+              Tambah Project
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Nama Project</th><th>Client</th><th>Status</th><th>Mulai</th><th style="text-align:right;">Budget</th><th style="text-align:right;">Profit</th><th style="text-align:right;">Profit %</th><th></th></tr>
+              </thead>
+              <tbody id="tableProjects"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ===================== MODAL: PEMASUKAN ===================== -->
+<div class="modal-overlay" id="modalPemasukan">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalPemasukanTitle">Tambah Pemasukan</div>
+      <button class="modal-close" data-close="modalPemasukan">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pemasukanId">
+      <div class="form-group">
+        <label>Project</label>
+        <select id="pemasukanProjectId"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="pemasukanTanggal">
+        </div>
+        <div class="form-group">
+          <label>Jumlah (Rp)</label>
+          <input type="number" id="pemasukanJumlah" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Sumber</label>
+        <input type="text" id="pemasukanSumber" placeholder="mis. PT Client Sejahtera">
+      </div>
+      <div class="form-group">
+        <label>Kategori</label>
+        <select id="pemasukanKategori"></select>
+      </div>
+      <div class="form-group">
+        <label>Keterangan (opsional)</label>
+        <textarea id="pemasukanKeterangan" rows="2" placeholder="Catatan tambahan..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalPemasukan">Batal</button>
+      <button class="btn btn-primary" id="btnSavePemasukan">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: PENGELUARAN ===================== -->
+<div class="modal-overlay" id="modalPengeluaran">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalPengeluaranTitle">Tambah Pengeluaran</div>
+      <button class="modal-close" data-close="modalPengeluaran">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="pengeluaranId">
+      <div class="form-group">
+        <label>Project</label>
+        <select id="pengeluaranProjectId"></select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tanggal</label>
+          <input type="date" id="pengeluaranTanggal">
+        </div>
+        <div class="form-group">
+          <label>Jumlah (Rp)</label>
+          <input type="number" id="pengeluaranJumlah" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Deskripsi</label>
+        <input type="text" id="pengeluaranDeskripsi" placeholder="mis. Pembelian material kabel">
+      </div>
+      <div class="form-group">
+        <label>Kategori</label>
+        <select id="pengeluaranKategori"></select>
+      </div>
+      <div class="form-group">
+        <label>Keterangan (opsional)</label>
+        <textarea id="pengeluaranKeterangan" rows="2" placeholder="Catatan tambahan..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalPengeluaran">Batal</button>
+      <button class="btn btn-primary" id="btnSavePengeluaran">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: PROJECT ===================== -->
+<div class="modal-overlay" id="modalProject">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalProjectTitle">Tambah Project</div>
+      <button class="modal-close" data-close="modalProject">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="projectId">
+      <div class="form-group">
+        <label>Nama Project</label>
+        <input type="text" id="projectNama" placeholder="mis. Revamp Sistem Monitoring">
+      </div>
+      <div class="form-group">
+        <label>Client</label>
+        <input type="text" id="projectClient" placeholder="mis. PLN Indonesia Power">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Status</label>
+          <select id="projectStatus">
+            <option value="Berjalan">Berjalan</option>
+            <option value="Selesai">Selesai</option>
+            <option value="Tertunda">Tertunda</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Budget (Rp)</label>
+          <input type="number" id="projectBudget" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tanggal Mulai</label>
+          <input type="date" id="projectTanggalMulai">
+        </div>
+        <div class="form-group">
+          <label>Tanggal Selesai (opsional)</label>
+          <input type="date" id="projectTanggalSelesai">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalProject">Batal</button>
+      <button class="btn btn-primary" id="btnSaveProject">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODAL: PERENCANAAN PROJECT ===================== -->
+<div class="modal-overlay" id="modalPerencanaan">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalPerencanaanTitle">Tambah Rencana Project</div>
+      <button class="modal-close" data-close="modalPerencanaan">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="perencanaanId">
+      <div class="form-group">
+        <label>1. Nama Project</label>
+        <input type="text" id="perencanaanNama" placeholder="mis. Revamp Sistem Monitoring">
+      </div>
+      <div class="form-group">
+        <label>2. Nama Client</label>
+        <input type="text" id="perencanaanClient" placeholder="mis. PLN Indonesia Power">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>3. Tgl Pengajuan Penawaran Harga</label>
+          <input type="date" id="perencanaanTglPenawaran">
+        </div>
+        <div class="form-group">
+          <label>4. Nilai Kontrak (Rp)</label>
+          <input type="number" id="perencanaanNilaiKontrak" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>5. Estimasi Biaya Pekerjaan (Rp)</label>
+        <input type="number" id="perencanaanEstimasiBiaya" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>6 & 7. Estimasi Profit (otomatis dihitung)</label>
+        <div class="estimasi-readout">
+          <div class="er-item">
+            <div class="er-label">Profit (Rupiah)</div>
+            <div class="er-val" id="perencanaanProfitRp" style="color:var(--accent-green);">Rp 0</div>
+          </div>
+          <div class="er-item">
+            <div class="er-label">Profit (%)</div>
+            <div class="er-val" id="perencanaanProfitPct" style="color:var(--accent-violet);">0%</div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Status Rencana</label>
+        <select id="perencanaanStatus">
+          <option value="Rencana">Rencana</option>
+          <option value="Approve">Approve</option>
+          <option value="Ditolak">Ditolak</option>
+        </select>
+        <div class="plan-hint" id="perencanaanApproveHint">
+          Jika status diubah menjadi <strong>Approve</strong>, rencana ini otomatis dikirim menjadi Project baru dan langsung tampil di Daftar Project, Dashboard, Pemasukan (nilai kontrak sebagai pemasukan awal opsional), dan Pengeluaran (budget project).
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tanggal Mulai Project (jika Approve)</label>
+        <input type="date" id="perencanaanTanggalMulai">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" data-close="modalPerencanaan">Batal</button>
+      <button class="btn btn-primary" id="btnSavePerencanaan">Simpan</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   KONFIGURASI — GANTI DENGAN URL WEB APP APPS SCRIPT ANDA
+   =====================================================================
+   Contoh: 'https://script.google.com/macros/s/AKfycbxXXXXXXXXXXXX/exec'
+   Selama masih kosong, aplikasi berjalan dalam MODE DEMO dengan data contoh.
+   ===================================================================== */
+const API_URL = 'https://script.google.com/macros/s/AKfycby4C6Qy8Xrpuw_WqzeymSmGzG8YjIY7xqNJvnotcx6QgJYOkpvb9T-b8OtJMpS1U3xB/exec'; // <-- ISI DI SINI
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+let STATE = {
+  projects: [],
+  pemasukan: [],
+  pengeluaran: [],
+  perencanaan: [],
+  settings: { kategoriPemasukan: [], kategoriPengeluaran: [] },
+  currentProject: 'ALL',
+  isDemo: !API_URL
+};
+let CHARTS = {};
+
+/* =====================================================================
+   DEMO DATA (dipakai jika API_URL belum diisi)
+   ===================================================================== */
+function getDemoData(){
+  const projects = [
+    { id:'P001', namaProject:'Revamp SIAGA Kalbar-1', client:'PLN Indonesia Power', status:'Berjalan', tanggalMulai:'2026-01-05', tanggalSelesai:'', budget:150000000 },
+    { id:'P002', namaProject:'Instalasi Jaringan CCTV', client:'PLTU Kalbar-1', status:'Selesai', tanggalMulai:'2025-11-01', tanggalSelesai:'2026-01-20', budget:85000000 },
+    { id:'P003', namaProject:'Pengadaan Genset Cadangan', client:'PLTU Kalbar-1', status:'Berjalan', tanggalMulai:'2026-02-10', tanggalSelesai:'', budget:210000000 }
+  ];
+  const pemasukan = [
+    { id:'IN001', projectId:'P001', tanggal:'2026-01-10', sumber:'PLN Indonesia Power', kategori:'Termin 1', jumlah:60000000, keterangan:'DP 40%' },
+    { id:'IN002', projectId:'P002', tanggal:'2025-11-05', sumber:'PLTU Kalbar-1', kategori:'Termin 1', jumlah:40000000, keterangan:'DP Awal' },
+    { id:'IN003', projectId:'P002', tanggal:'2026-01-18', sumber:'PLTU Kalbar-1', kategori:'Pelunasan', jumlah:45000000, keterangan:'Pelunasan akhir' },
+    { id:'IN004', projectId:'P003', tanggal:'2026-02-15', sumber:'PLTU Kalbar-1', kategori:'Termin 1', jumlah:80000000, keterangan:'' },
+    { id:'IN005', projectId:'P001', tanggal:'2026-03-02', sumber:'PLN Indonesia Power', kategori:'Termin 2', jumlah:45000000, keterangan:'' }
+  ];
+  const pengeluaran = [
+    { id:'EX001', projectId:'P001', tanggal:'2026-01-12', kategori:'Material', deskripsi:'Pembelian Kabel & Server', jumlah:18000000, keterangan:'' },
+    { id:'EX002', projectId:'P001', tanggal:'2026-01-15', kategori:'Tenaga Kerja', deskripsi:'Upah Tim Developer', jumlah:12000000, keterangan:'' },
+    { id:'EX003', projectId:'P002', tanggal:'2025-11-10', kategori:'Material', deskripsi:'Kamera CCTV & Aksesoris', jumlah:25000000, keterangan:'' },
+    { id:'EX004', projectId:'P002', tanggal:'2025-12-01', kategori:'Tenaga Kerja', deskripsi:'Instalasi & Konfigurasi', jumlah:15000000, keterangan:'' },
+    { id:'EX005', projectId:'P003', tanggal:'2026-02-20', kategori:'Material', deskripsi:'Genset & Panel Kontrol', jumlah:95000000, keterangan:'' },
+    { id:'EX006', projectId:'P001', tanggal:'2026-03-05', kategori:'Operasional', deskripsi:'Transportasi & Akomodasi', jumlah:6000000, keterangan:'' }
+  ];
+  const settings = {
+    kategoriPemasukan:['Termin 1','Termin 2','Termin 3','Pelunasan','Bonus','Lain-lain'],
+    kategoriPengeluaran:['Material','Tenaga Kerja','Transportasi','Operasional','Sewa Alat','Lain-lain']
+  };
+  const perencanaan = [
+    { id:'PL001', namaProject:'Upgrade Sistem SCADA', client:'PLTU Kalbar-2', tglPenawaran:'2026-04-01', nilaiKontrak:180000000, estimasiBiaya:120000000, status:'Rencana', tanggalMulai:'', linkedProjectId:'' },
+    { id:'PL002', namaProject:'Pengadaan Panel Distribusi', client:'PLN Indonesia Power', tglPenawaran:'2026-03-10', nilaiKontrak:95000000, estimasiBiaya:70000000, status:'Approve', tanggalMulai:'2026-03-20', linkedProjectId:'P001' }
+  ];
+  return { projects, pemasukan, pengeluaran, perencanaan, settings };
+}
+
+/* =====================================================================
+   API LAYER
+   ===================================================================== */
+async function apiGet(action, params={}){
+  if(STATE.isDemo) return null;
+  const qs = new URLSearchParams(Object.assign({action}, params)).toString();
+  const res = await fetch(`${API_URL}?${qs}`);
+  return res.json();
+}
+async function apiPost(action, data){
+  if(STATE.isDemo){
+    showToast('error', 'Mode demo — koneksi backend belum dikonfigurasi.');
+    return { success:false };
+  }
+  try{
+    const res = await fetch(API_URL, {
+      method:'POST',
+      body: JSON.stringify({ action, data })
+    });
+    if(!res.ok){
+      return { success:false, message:'Server merespons status ' + res.status + '. Coba cek deployment Apps Script Anda.' };
+    }
+    const json = await res.json();
+    if(json === undefined || json === null || typeof json.success === 'undefined'){
+      return { success:false, message:'Respons server tidak valid / tidak dikenali.' };
+    }
+    return json;
+  } catch(err){
+    console.error('apiPost error:', err);
+    return { success:false, message: 'Gagal menghubungi backend: ' + (err && err.message || err) };
+  }
+}
+
+async function loadAllData(){
+  if(STATE.isDemo){
+    Object.assign(STATE, getDemoData());
+    document.getElementById('configBanner').style.display = 'flex';
+    setConnStatus(false, 'Mode Demo');
+    return;
+  }
+  try{
+    const res = await apiGet('getAll');
+    if(res && res.success){
+      STATE.projects = res.data.projects;
+      STATE.pemasukan = res.data.pemasukan;
+      STATE.pengeluaran = res.data.pengeluaran;
+      STATE.perencanaan = res.data.perencanaan || [];
+      STATE.settings = res.data.settings;
+      setConnStatus(true, 'Terhubung');
+    } else {
+      throw new Error(res && res.message || 'Gagal memuat data');
+    }
+  } catch(err){
+    console.error(err);
+    setConnStatus(false, 'Gagal terhubung');
+    showToast('error', 'Gagal memuat data dari backend. Menampilkan data contoh.');
+    Object.assign(STATE, getDemoData());
+    document.getElementById('configBanner').style.display = 'flex';
+  }
+}
+
+function setConnStatus(ok, text){
+  document.getElementById('connStatusDot').className = 'status-dot' + (ok ? '' : ' offline');
+  document.getElementById('connStatusText').textContent = text;
+}
+
+/* =====================================================================
+   UTIL
+   ===================================================================== */
+function toNumber(n){
+  if(typeof n === 'number') return isNaN(n) ? 0 : n;
+  if(n === null || n === undefined || n === '') return 0;
+  // Bersihkan string dari "Rp", spasi, dan pemisah ribuan gaya Indonesia (titik),
+  // lalu ubah koma desimal (jika ada) jadi titik.
+  let s = String(n).trim().replace(/rp/i,'').trim();
+  if(/^-?\d+([.,]\d+)?$/.test(s) === false){
+    // format campuran mis. "150.000.000" atau "150,000,000"
+    s = s.replace(/[^0-9,.-]/g,'');
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+    if(lastComma > lastDot){
+      // koma sebagai desimal, titik sebagai ribuan
+      s = s.replace(/\./g,'').replace(',', '.');
+    } else {
+      // titik sebagai ribuan (atau desimal tunggal), buang semua titik ribuan
+      s = s.replace(/,/g,'');
+      const parts = s.split('.');
+      if(parts.length > 2){ s = parts.join(''); } // banyak titik = pemisah ribuan
+    }
+  }
+  const num = parseFloat(s);
+  return isNaN(num) ? 0 : num;
+}
+function formatRupiah(n){
+  n = toNumber(n);
+  return 'Rp ' + n.toLocaleString('id-ID', { maximumFractionDigits:0 });
+}
+function formatDateID(d){
+  if(!d) return '-';
+  const date = new Date(d);
+  if(isNaN(date)) return d;
+  return date.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
+}
+function projectName(id){
+  const p = STATE.projects.find(x => x.id === id);
+  return p ? p.namaProject : id;
+}
+function todayISO(){
+  return new Date().toISOString().slice(0,10);
+}
+function showToast(type, msg){
+  const container = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const icon = type === 'success'
+    ? '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6L9 17l-5-5"/></svg>'
+    : '<svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>';
+  el.innerHTML = icon + '<span>' + msg + '</span>';
+  container.appendChild(el);
+  setTimeout(() => { el.style.opacity='0'; el.style.transform='translateX(30px)'; el.style.transition='all .3s ease'; setTimeout(()=>el.remove(), 300); }, 3200);
+}
+
+/* Filter by currently selected global project */
+function scoped(list){
+  if(STATE.currentProject === 'ALL') return list;
+  return list.filter(x => x.projectId === STATE.currentProject);
+}
+
+/* =====================================================================
+   NAVIGATION
+   ===================================================================== */
+const PAGE_META = {
+  dashboard: { title:'Dashboard', sub:'Ringkasan performa keuangan seluruh project' },
+  pemasukan: { title:'Rincian Pemasukan', sub:'Catatan seluruh transaksi pemasukan per project' },
+  pengeluaran: { title:'Rincian Pengeluaran', sub:'Catatan seluruh transaksi pengeluaran per project' },
+  analisa: { title:'Analisa', sub:'Wawasan mendalam performa keuangan project' },
+  laporan: { title:'Laporan', sub:'Susun dan ekspor laporan keuangan berdasarkan periode' },
+  perencanaan: { title:'Perencanaan Project', sub:'Susun rencana project sebelum disetujui dan berjalan' },
+  projects: { title:'Daftar Project', sub:'Kelola data induk project' }
+};
+
+function navigateTo(pageId){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + pageId).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.toggle('active', l.dataset.page === pageId));
+  document.getElementById('pageTitle').textContent = PAGE_META[pageId].title;
+  document.getElementById('pageSubtitle').textContent = PAGE_META[pageId].sub;
+  document.getElementById('sidebar').classList.remove('open');
+  renderPage(pageId);
+}
+
+document.querySelectorAll('.nav-link').forEach(link => {
+  link.addEventListener('click', () => navigateTo(link.dataset.page));
+});
+document.getElementById('menuToggle').addEventListener('click', () => {
+  document.getElementById('sidebar').classList.toggle('open');
+});
+
+/* =====================================================================
+   RENDER: DASHBOARD
+   ===================================================================== */
+function renderDashboard(){
+  const pemasukan = scoped(STATE.pemasukan);
+  const pengeluaran = scoped(STATE.pengeluaran);
+
+  const totalIncome = pemasukan.reduce((s,x)=>s+toNumber(x.jumlah),0);
+  const totalExpense = pengeluaran.reduce((s,x)=>s+toNumber(x.jumlah),0);
+  const profit = totalIncome - totalExpense;
+  const pct = totalIncome > 0 ? (profit/totalIncome*100) : 0;
+
+  document.getElementById('kpiIncome').textContent = formatRupiah(totalIncome);
+  document.getElementById('kpiExpense').textContent = formatRupiah(totalExpense);
+  document.getElementById('kpiProfit').textContent = formatRupiah(profit);
+  document.getElementById('kpiProfit').style.color = profit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+  document.getElementById('kpiPct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('kpiPct').style.color = pct >= 0 ? 'var(--accent-violet)' : 'var(--accent-red)';
+
+  document.getElementById('kpiIncomeDelta').textContent = pemasukan.length + ' transaksi tercatat';
+  document.getElementById('kpiExpenseDelta').textContent = pengeluaran.length + ' transaksi tercatat';
+  document.getElementById('kpiProfitDelta').innerHTML = profit >= 0
+    ? '<span style="color:var(--accent-green);">▲</span> Posisi surplus'
+    : '<span style="color:var(--accent-red);">▼</span> Posisi defisit';
+  document.getElementById('kpiPctDelta').textContent = 'margin dari pemasukan';
+
+  // Monthly trend
+  const monthMap = {};
+  pemasukan.forEach(x => {
+    const k = String(x.tanggal).substring(0,7);
+    monthMap[k] = monthMap[k] || {income:0, expense:0};
+    monthMap[k].income += toNumber(x.jumlah);
+  });
+  pengeluaran.forEach(x => {
+    const k = String(x.tanggal).substring(0,7);
+    monthMap[k] = monthMap[k] || {income:0, expense:0};
+    monthMap[k].expense += toNumber(x.jumlah);
+  });
+  const months = Object.keys(monthMap).sort();
+  renderTrendChart(months, months.map(m=>monthMap[m].income), months.map(m=>monthMap[m].expense));
+
+  // Expense donut
+  const catMap = {};
+  pengeluaran.forEach(x => { catMap[x.kategori] = (catMap[x.kategori]||0) + toNumber(x.jumlah); });
+  renderExpenseDonut(Object.keys(catMap), Object.values(catMap));
+
+  // Project ranking
+  const rankList = document.getElementById('dashboardProjRank');
+  const ranked = STATE.projects.map(p => {
+    const inc = STATE.pemasukan.filter(x=>x.projectId===p.id).reduce((s,x)=>s+toNumber(x.jumlah),0);
+    const exp = STATE.pengeluaran.filter(x=>x.projectId===p.id).reduce((s,x)=>s+toNumber(x.jumlah),0);
+    return { name:p.namaProject, client:p.client, profit: inc-exp, pct: inc>0 ? ((inc-exp)/inc*100) : 0 };
+  }).sort((a,b)=>b.profit-a.profit);
+
+  if(ranked.length === 0){
+    rankList.innerHTML = '<div class="empty-state"><p>Belum ada data project.</p></div>';
+  } else {
+    rankList.innerHTML = ranked.map((r,i) => `
+      <div class="proj-rank-item">
+        <div class="proj-rank-num">#${i+1}</div>
+        <div class="proj-rank-info">
+          <div class="proj-rank-name">${escapeHTML(r.name)}</div>
+          <div class="proj-rank-meta">${escapeHTML(r.client)} · margin ${r.pct.toFixed(1)}%</div>
+        </div>
+        <div class="proj-rank-val" style="color:${r.profit>=0?'var(--accent-green)':'var(--accent-red)'}">${formatRupiah(r.profit)}</div>
+      </div>
+    `).join('');
+  }
+}
+
+/* Guard: jika library Chart.js gagal dimuat dari CDN (koneksi/firewall),
+   tampilkan pesan di area canvas alih-alih membuat seluruh halaman error. */
+function chartLibAvailable(canvasId){
+  if(typeof Chart !== 'undefined') return true;
+  const canvas = document.getElementById(canvasId);
+  if(canvas && canvas.parentElement && !canvas.parentElement.querySelector('.chart-unavailable')){
+    const msg = document.createElement('div');
+    msg.className = 'chart-unavailable';
+    msg.style.cssText = 'display:flex; align-items:center; justify-content:center; height:100%; color:var(--text-tertiary); font-size:12px; text-align:center; padding:20px;';
+    msg.textContent = 'Grafik tidak dapat dimuat (koneksi ke library chart terblokir). Data tetap tersedia di tabel/KPI lain.';
+    canvas.parentElement.appendChild(msg);
+  }
+  return false;
+}
+
+function renderTrendChart(labels, income, expense){
+  if(!chartLibAvailable('chartTrend')) return;
+  const ctx = document.getElementById('chartTrend');
+  if(CHARTS.trend) CHARTS.trend.destroy();
+  CHARTS.trend = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels: labels.length ? labels : ['Belum ada data'],
+      datasets:[
+        { label:'Pemasukan', data: income.length?income:[0], borderColor:'#00e5ff', backgroundColor:'rgba(0,229,255,.12)', fill:true, tension:.35, pointRadius:3, pointBackgroundColor:'#00e5ff', borderWidth:2.4 },
+        { label:'Pengeluaran', data: expense.length?expense:[0], borderColor:'#ff4d6d', backgroundColor:'rgba(255,77,109,.08)', fill:true, tension:.35, pointRadius:3, pointBackgroundColor:'#ff4d6d', borderWidth:2.4 }
+      ]
+    },
+    options: baseChartOptions({ y:{ ticks:{ callback:v=>formatCompact(v) } } })
+  });
+}
+
+function renderExpenseDonut(labels, data){
+  if(!chartLibAvailable('chartExpenseDonut')) return;
+  const ctx = document.getElementById('chartExpenseDonut');
+  if(CHARTS.donut) CHARTS.donut.destroy();
+  const colors = ['#00e5ff','#8b7bff','#00e6a8','#ffb020','#ff4d6d','#5c9dff','#ff8a5c'];
+  CHARTS.donut = new Chart(ctx, {
+    type:'doughnut',
+    data:{
+      labels: labels.length? labels : ['Belum ada data'],
+      datasets:[{ data: data.length?data:[1], backgroundColor: colors, borderColor:'#111629', borderWidth:3 }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false, cutout:'68%',
+      plugins:{
+        legend:{ position:'bottom', labels:{ color:'#9aa3c2', font:{family:"'Inter',sans-serif", size:11.5}, padding:14, usePointStyle:true, pointStyle:'circle' } },
+        tooltip: tooltipStyle()
+      }
+    }
+  });
+}
+
+/* =====================================================================
+   RENDER: PEMASUKAN
+   ===================================================================== */
+function renderPemasukan(){
+  const searchVal = (document.getElementById('searchPemasukan').value || '').toLowerCase();
+  const kategoriVal = document.getElementById('filterKategoriPemasukan').value;
+
+  let data = scoped(STATE.pemasukan);
+  if(searchVal) data = data.filter(x => (x.sumber||'').toLowerCase().includes(searchVal) || (x.keterangan||'').toLowerCase().includes(searchVal));
+  if(kategoriVal) data = data.filter(x => x.kategori === kategoriVal);
+  data = [...data].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+
+  const total = data.reduce((s,x)=>s+toNumber(x.jumlah),0);
+  document.getElementById('pemasukanSummary').textContent = `Total: ${formatRupiah(total)} · ${data.length} transaksi`;
+
+  const tbody = document.getElementById('tablePemasukan');
+  const empty = document.getElementById('emptyPemasukan');
+  if(data.length === 0){
+    tbody.innerHTML = ''; empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = data.map(x => `
+      <tr>
+        <td>${formatDateID(x.tanggal)}</td>
+        <td class="strong">${escapeHTML(projectName(x.projectId))}</td>
+        <td>${escapeHTML(x.sumber||'-')}</td>
+        <td><span class="tag">${escapeHTML(x.kategori||'-')}</span></td>
+        <td>${escapeHTML(x.keterangan||'-')}</td>
+        <td class="num" style="color:var(--accent-green);">${formatRupiah(x.jumlah)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="icon-btn-sm edit-pemasukan" data-id="${x.id}" title="Edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="icon-btn-sm del del-pemasukan" data-id="${x.id}" title="Hapus">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+function renderPengeluaran(){
+  const searchVal = (document.getElementById('searchPengeluaran').value || '').toLowerCase();
+  const kategoriVal = document.getElementById('filterKategoriPengeluaran').value;
+
+  let data = scoped(STATE.pengeluaran);
+  if(searchVal) data = data.filter(x => (x.deskripsi||'').toLowerCase().includes(searchVal) || (x.keterangan||'').toLowerCase().includes(searchVal));
+  if(kategoriVal) data = data.filter(x => x.kategori === kategoriVal);
+  data = [...data].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+
+  const total = data.reduce((s,x)=>s+toNumber(x.jumlah),0);
+  document.getElementById('pengeluaranSummary').textContent = `Total: ${formatRupiah(total)} · ${data.length} transaksi`;
+
+  const tbody = document.getElementById('tablePengeluaran');
+  const empty = document.getElementById('emptyPengeluaran');
+  if(data.length === 0){
+    tbody.innerHTML = ''; empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = data.map(x => `
+      <tr>
+        <td>${formatDateID(x.tanggal)}</td>
+        <td class="strong">${escapeHTML(projectName(x.projectId))}</td>
+        <td>${escapeHTML(x.deskripsi||'-')}</td>
+        <td><span class="tag red">${escapeHTML(x.kategori||'-')}</span></td>
+        <td>${escapeHTML(x.keterangan||'-')}</td>
+        <td class="num" style="color:var(--accent-red);">${formatRupiah(x.jumlah)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="icon-btn-sm edit-pengeluaran" data-id="${x.id}" title="Edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="icon-btn-sm del del-pengeluaran" data-id="${x.id}" title="Hapus">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  }
+}
+
+/* =====================================================================
+   RENDER: ANALISA
+   ===================================================================== */
+function renderAnalisa(){
+  const pemasukan = scoped(STATE.pemasukan);
+  const pengeluaran = scoped(STATE.pengeluaran);
+
+  const totalIncome = pemasukan.reduce((s,x)=>s+toNumber(x.jumlah),0);
+  const totalExpense = pengeluaran.reduce((s,x)=>s+toNumber(x.jumlah),0);
+  document.getElementById('analisaAvgIncome').textContent = formatRupiah(totalIncome);
+  document.getElementById('analisaAvgExpense').textContent = formatRupiah(totalExpense);
+  document.getElementById('analisaTotalTx').textContent = (pemasukan.length + pengeluaran.length).toLocaleString('id-ID');
+
+  // Project comparison chart (always show all projects regardless of global filter for context)
+  const projData = STATE.projects.map(p => {
+    const inc = STATE.pemasukan.filter(x=>x.projectId===p.id).reduce((s,x)=>s+toNumber(x.jumlah),0);
+    const exp = STATE.pengeluaran.filter(x=>x.projectId===p.id).reduce((s,x)=>s+toNumber(x.jumlah),0);
+    return { name:p.namaProject, profit: inc-exp };
+  });
+  renderProjectCompareChart(projData);
+
+  // Category compare (income vs expense) — scoped
+  const incCat = {}; pemasukan.forEach(x=>{ incCat[x.kategori]=(incCat[x.kategori]||0)+toNumber(x.jumlah); });
+  const expCat = {}; pengeluaran.forEach(x=>{ expCat[x.kategori]=(expCat[x.kategori]||0)+toNumber(x.jumlah); });
+  const allCats = [...new Set([...Object.keys(incCat), ...Object.keys(expCat)])];
+  renderCategoryCompareChart(allCats, allCats.map(c=>incCat[c]||0), allCats.map(c=>expCat[c]||0));
+
+  // Budget usage
+  const budgetList = document.getElementById('budgetUsageList');
+  const budgetData = STATE.projects.map(p => {
+    const exp = STATE.pengeluaran.filter(x=>x.projectId===p.id).reduce((s,x)=>s+toNumber(x.jumlah),0);
+    const usagePct = toNumber(p.budget) > 0 ? (exp/toNumber(p.budget)*100) : 0;
+    return { name:p.namaProject, budget:toNumber(p.budget), used:exp, pct:usagePct };
+  });
+  if(budgetData.length === 0){
+    budgetList.innerHTML = '<div class="empty-state"><p>Belum ada data project.</p></div>';
+  } else {
+    budgetList.innerHTML = budgetData.map(b => `
+      <div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:7px; font-size:13px;">
+          <span style="font-weight:600; color:var(--text-primary);">${escapeHTML(b.name)}</span>
+          <span style="font-family:var(--font-mono); color:${b.pct>90?'var(--accent-red)':'var(--text-secondary)'};">${formatRupiah(b.used)} / ${formatRupiah(b.budget)} (${b.pct.toFixed(1)}%)</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill ${b.pct>90?'warn':''}" style="width:${Math.min(b.pct,100)}%;"></div></div>
+      </div>
+    `).join('');
+  }
+}
+
+function renderProjectCompareChart(projData){
+  if(!chartLibAvailable('chartProjectCompare')) return;
+  const ctx = document.getElementById('chartProjectCompare');
+  if(CHARTS.projCompare) CHARTS.projCompare.destroy();
+  CHARTS.projCompare = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: projData.length ? projData.map(p=>truncate(p.name, 18)) : ['Belum ada data'],
+      datasets:[{
+        label:'Profit',
+        data: projData.length ? projData.map(p=>p.profit) : [0],
+        backgroundColor: projData.map(p => p.profit>=0 ? 'rgba(0,230,168,.75)' : 'rgba(255,77,109,.75)'),
+        borderRadius:6, maxBarThickness:42
+      }]
+    },
+    options: baseChartOptions({ y:{ ticks:{ callback:v=>formatCompact(v) } } }, false)
+  });
+}
+
+function renderCategoryCompareChart(labels, income, expense){
+  if(!chartLibAvailable('chartCategoryCompare')) return;
+  const ctx = document.getElementById('chartCategoryCompare');
+  if(CHARTS.catCompare) CHARTS.catCompare.destroy();
+  CHARTS.catCompare = new Chart(ctx, {
+    type:'bar',
+    data:{
+      labels: labels.length ? labels : ['Belum ada data'],
+      datasets:[
+        { label:'Pemasukan', data: income.length?income:[0], backgroundColor:'rgba(0,229,255,.75)', borderRadius:6, maxBarThickness:26 },
+        { label:'Pengeluaran', data: expense.length?expense:[0], backgroundColor:'rgba(255,77,109,.75)', borderRadius:6, maxBarThickness:26 }
+      ]
+    },
+    options: baseChartOptions({ y:{ ticks:{ callback:v=>formatCompact(v) } } })
+  });
+}
+
+/* =====================================================================
+   RENDER: LAPORAN
+   ===================================================================== */
+function renderLaporan(){
+  const startInput = document.getElementById('laporanStart').value;
+  const endInput = document.getElementById('laporanEnd').value;
+
+  let pemasukan = scoped(STATE.pemasukan);
+  let pengeluaran = scoped(STATE.pengeluaran);
+
+  if(startInput){ pemasukan = pemasukan.filter(x=>x.tanggal >= startInput); pengeluaran = pengeluaran.filter(x=>x.tanggal >= startInput); }
+  if(endInput){ pemasukan = pemasukan.filter(x=>x.tanggal <= endInput); pengeluaran = pengeluaran.filter(x=>x.tanggal <= endInput); }
+
+  const totalIncome = pemasukan.reduce((s,x)=>s+toNumber(x.jumlah),0);
+  const totalExpense = pengeluaran.reduce((s,x)=>s+toNumber(x.jumlah),0);
+
+  document.getElementById('laporanIncome').textContent = formatRupiah(totalIncome);
+  document.getElementById('laporanExpense').textContent = formatRupiah(totalExpense);
+  const profitEl = document.getElementById('laporanProfit');
+  profitEl.textContent = formatRupiah(totalIncome-totalExpense);
+  profitEl.style.color = (totalIncome-totalExpense) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+  const combined = [
+    ...pemasukan.map(x=>({...x, tipe:'Pemasukan', deskripsi:x.sumber})),
+    ...pengeluaran.map(x=>({...x, tipe:'Pengeluaran'}))
+  ].sort((a,b)=> new Date(b.tanggal) - new Date(a.tanggal));
+
+  const tbody = document.getElementById('tableLaporan');
+  const empty = document.getElementById('emptyLaporan');
+  if(combined.length === 0){
+    tbody.innerHTML = ''; empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = combined.map(x => `
+      <tr>
+        <td>${formatDateID(x.tanggal)}</td>
+        <td><span class="tag ${x.tipe==='Pemasukan'?'green':'red'}">${x.tipe}</span></td>
+        <td class="strong">${escapeHTML(projectName(x.projectId))}</td>
+        <td>${escapeHTML(x.deskripsi||'-')}</td>
+        <td>${escapeHTML(x.kategori||'-')}</td>
+        <td class="num" style="color:${x.tipe==='Pemasukan'?'var(--accent-green)':'var(--accent-red)'};">${x.tipe==='Pemasukan'?'+':'-'} ${formatRupiah(x.jumlah)}</td>
+      </tr>
+    `).join('');
+  }
+
+  const projLabel = STATE.currentProject === 'ALL' ? 'Semua Project' : projectName(STATE.currentProject);
+  const periodeLabel = (startInput ? formatDateID(startInput) : 'Awal') + ' — ' + (endInput ? formatDateID(endInput) : 'Sekarang');
+  const cetakLabel = formatDateID(todayISO());
+  document.getElementById('reportPrintMeta').innerHTML =
+    `Project: ${escapeHTML(projLabel)} &nbsp;•&nbsp; Periode: ${periodeLabel} &nbsp;•&nbsp; Dicetak: ${cetakLabel}`;
+}
+
+/* =====================================================================
+   RENDER: PROJECTS
+   ===================================================================== */
+/* =====================================================================
+   RENDER: PERENCANAAN PROJECT
+   ===================================================================== */
+function planStatusTag(status){
+  if(status === 'Approve') return 'tag green';
+  if(status === 'Ditolak') return 'tag red';
+  return 'tag violet';
+}
+function renderPerencanaan(){
+  const search = (document.getElementById('searchPerencanaan')?.value || '').toLowerCase();
+  const filterStatus = document.getElementById('filterStatusPerencanaan')?.value || '';
+  let list = STATE.perencanaan.slice();
+  if(search) list = list.filter(x => (x.namaProject||'').toLowerCase().includes(search) || (x.client||'').toLowerCase().includes(search));
+  if(filterStatus) list = list.filter(x => x.status === filterStatus);
+  list.sort((a,b) => (b.tglPenawaran||'').localeCompare(a.tglPenawaran||''));
+
+  const tbody = document.getElementById('tablePerencanaan');
+  const empty = document.getElementById('emptyPerencanaan');
+  if(list.length === 0){
+    tbody.innerHTML = '';
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = list.map(p => {
+    const biaya = toNumber(p.estimasiBiaya);
+    const kontrak = toNumber(p.nilaiKontrak);
+    const profitRp = kontrak - biaya;
+    const profitPct = kontrak>0 ? (profitRp/kontrak*100) : 0;
+    const isApproved = p.status === 'Approve';
+    return `
+      <tr>
+        <td class="strong">${escapeHTML(p.namaProject)}</td>
+        <td>${escapeHTML(p.client)}</td>
+        <td>${formatDateID(p.tglPenawaran)}</td>
+        <td class="num">${formatRupiah(kontrak)}</td>
+        <td class="num">${formatRupiah(biaya)}</td>
+        <td class="num" style="color:${profitRp>=0?'var(--accent-green)':'var(--accent-red)'};">${formatRupiah(profitRp)}</td>
+        <td class="num" style="color:${profitPct>=0?'var(--accent-violet)':'var(--accent-red)'};">${profitPct.toFixed(1)}%</td>
+        <td><span class="${planStatusTag(p.status)}">${escapeHTML(p.status)}</span></td>
+        <td>
+          <div class="row-actions">
+            <button class="icon-btn-sm edit-perencanaan" data-id="${p.id}" title="Edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="icon-btn-sm del del-perencanaan" data-id="${p.id}" title="Hapus" ${isApproved ? 'disabled style="opacity:.35;cursor:not-allowed;"' : ''}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function updatePerencanaanEstimasiReadout(){
+  const kontrak = Number(document.getElementById('perencanaanNilaiKontrak').value) || 0;
+  const biaya = Number(document.getElementById('perencanaanEstimasiBiaya').value) || 0;
+  const profitRp = kontrak - biaya;
+  const profitPct = kontrak>0 ? (profitRp/kontrak*100) : 0;
+  const rpEl = document.getElementById('perencanaanProfitRp');
+  const pctEl = document.getElementById('perencanaanProfitPct');
+  rpEl.textContent = formatRupiah(profitRp);
+  rpEl.style.color = profitRp>=0 ? 'var(--accent-green)' : 'var(--accent-red)';
+  pctEl.textContent = profitPct.toFixed(1) + '%';
+  pctEl.style.color = profitPct>=0 ? 'var(--accent-violet)' : 'var(--accent-red)';
+}
+
+/* Konversi 1 rencana project (status Approve) menjadi Project resmi
+   + otomatis tercermin di Dashboard, Pemasukan, Pengeluaran (lewat budget & profit). */
+function buildProjectFromPlan(plan){
+  return {
+    id: plan.linkedProjectId || ('P' + String(Date.now()).slice(-4)),
+    namaProject: plan.namaProject,
+    client: plan.client,
+    status: 'Berjalan',
+    budget: toNumber(plan.estimasiBiaya),
+    tanggalMulai: plan.tanggalMulai || todayISO(),
+    tanggalSelesai: ''
+  };
+}
+
+function renderProjects(){
+  const tbody = document.getElementById('tableProjects');
+  if(STATE.projects.length === 0){
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:var(--text-tertiary);">Belum ada project. Klik "Tambah Project" untuk memulai.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = STATE.projects.map(p => {
+    const inc = STATE.pemasukan.filter(x=>x.projectId===p.id).reduce((s,x)=>s+toNumber(x.jumlah),0);
+    const exp = STATE.pengeluaran.filter(x=>x.projectId===p.id).reduce((s,x)=>s+toNumber(x.jumlah),0);
+    const profit = inc - exp;
+    const pct = inc>0 ? (profit/inc*100) : 0;
+    const statusTag = p.status === 'Berjalan' ? 'tag' : (p.status === 'Selesai' ? 'tag green' : 'tag amber');
+    return `
+      <tr>
+        <td class="strong">${escapeHTML(p.namaProject)}</td>
+        <td>${escapeHTML(p.client)}</td>
+        <td><span class="${statusTag}">${escapeHTML(p.status)}</span></td>
+        <td>${formatDateID(p.tanggalMulai)}</td>
+        <td class="num">${formatRupiah(p.budget)}</td>
+        <td class="num" style="color:${profit>=0?'var(--accent-green)':'var(--accent-red)'};">${formatRupiah(profit)}</td>
+        <td class="num" style="color:${pct>=0?'var(--accent-violet)':'var(--accent-red)'};">${pct.toFixed(1)}%</td>
+        <td>
+          <div class="row-actions">
+            <button class="icon-btn-sm edit-project" data-id="${p.id}" title="Edit">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 013 3L12 15l-4 1 1-4z"/></svg>
+            </button>
+            <button class="icon-btn-sm del del-project" data-id="${p.id}" title="Hapus">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"/></svg>
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+/* =====================================================================
+   CHART HELPERS
+   ===================================================================== */
+function baseChartOptions(extra={}, showLegend=true){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    interaction:{ mode:'index', intersect:false },
+    plugins:{
+      legend:{ display: showLegend, position:'bottom', labels:{ color:'#9aa3c2', font:{family:"'Inter',sans-serif", size:11.5}, padding:14, usePointStyle:true, pointStyle:'circle' } },
+      tooltip: tooltipStyle()
+    },
+    scales:{
+      x:{ grid:{ color:'rgba(255,255,255,.04)', drawTicks:false }, ticks:{ color:'#5c6488', font:{family:"'JetBrains Mono',monospace", size:10.5} }, border:{color:'rgba(255,255,255,.06)'} },
+      y:Object.assign({ grid:{ color:'rgba(255,255,255,.04)', drawTicks:false }, ticks:{ color:'#5c6488', font:{family:"'JetBrains Mono',monospace", size:10.5} }, border:{display:false} }, extra.y || {})
+    }
+  };
+}
+function tooltipStyle(){
+  return {
+    backgroundColor:'#161d34', borderColor:'rgba(0,229,255,.25)', borderWidth:1,
+    titleColor:'#eef1fb', bodyColor:'#9aa3c2', padding:11, cornerRadius:8,
+    titleFont:{family:"'Space Grotesk',sans-serif", size:12, weight:600},
+    bodyFont:{family:"'JetBrains Mono',monospace", size:11.5},
+    callbacks:{ label:(ctx)=> ` ${ctx.dataset.label||''}: ${formatRupiah(ctx.parsed.y ?? ctx.parsed)}` }
+  };
+}
+function formatCompact(v){
+  if(Math.abs(v) >= 1e9) return (v/1e9).toFixed(1)+'M';
+  if(Math.abs(v) >= 1e6) return (v/1e6).toFixed(0)+'jt';
+  if(Math.abs(v) >= 1e3) return (v/1e3).toFixed(0)+'rb';
+  return v;
+}
+function truncate(str, n){ return str && str.length > n ? str.slice(0,n-1)+'…' : str; }
+function escapeHTML(str){
+  if(str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =====================================================================
+   PAGE DISPATCH
+   ===================================================================== */
+function renderPage(pageId){
+  if(pageId === 'dashboard') renderDashboard();
+  else if(pageId === 'pemasukan') renderPemasukan();
+  else if(pageId === 'pengeluaran') renderPengeluaran();
+  else if(pageId === 'analisa') renderAnalisa();
+  else if(pageId === 'laporan') renderLaporan();
+  else if(pageId === 'perencanaan') renderPerencanaan();
+  else if(pageId === 'projects') renderProjects();
+}
+
+function renderAll(){
+  populateProjectSelects();
+  populateCategorySelects();
+  renderPage(getCurrentPageId());
+}
+function getCurrentPageId(){
+  const activePage = document.querySelector('.page.active');
+  return activePage ? activePage.id.replace('page-','') : 'dashboard';
+}
+
+function populateProjectSelects(){
+  const opts = STATE.projects.map(p => `<option value="${p.id}">${escapeHTML(p.namaProject)}</option>`).join('');
+  const globalSel = document.getElementById('globalProjectSelect');
+  const prevVal = globalSel.value || 'ALL';
+  globalSel.innerHTML = '<option value="ALL">Semua Project</option>' + opts;
+  globalSel.value = STATE.projects.find(p=>p.id===prevVal) ? prevVal : 'ALL';
+
+  document.getElementById('pemasukanProjectId').innerHTML = opts;
+  document.getElementById('pengeluaranProjectId').innerHTML = opts;
+}
+
+function populateCategorySelects(){
+  const inc = STATE.settings.kategoriPemasukan || [];
+  const exp = STATE.settings.kategoriPengeluaran || [];
+
+  document.getElementById('pemasukanKategori').innerHTML = inc.map(k=>`<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+  document.getElementById('pengeluaranKategori').innerHTML = exp.map(k=>`<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+
+  const filterInc = document.getElementById('filterKategoriPemasukan');
+  filterInc.innerHTML = '<option value="">Semua Kategori</option>' + inc.map(k=>`<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+  const filterExp = document.getElementById('filterKategoriPengeluaran');
+  filterExp.innerHTML = '<option value="">Semua Kategori</option>' + exp.map(k=>`<option value="${escapeHTML(k)}">${escapeHTML(k)}</option>`).join('');
+}
+
+/* =====================================================================
+   EVENTS: global project selector & refresh
+   ===================================================================== */
+document.getElementById('globalProjectSelect').addEventListener('change', (e) => {
+  STATE.currentProject = e.target.value;
+  renderPage(getCurrentPageId());
+});
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  document.getElementById('refreshBtn').style.transform = 'rotate(360deg)';
+  document.getElementById('refreshBtn').style.transition = 'transform .5s ease';
+  await loadAllData();
+  renderAll();
+  setTimeout(()=>{ document.getElementById('refreshBtn').style.transform=''; }, 500);
+  showToast('success','Data berhasil dimuat ulang.');
+});
+document.getElementById('searchPemasukan').addEventListener('input', renderPemasukan);
+document.getElementById('filterKategoriPemasukan').addEventListener('change', renderPemasukan);
+document.getElementById('searchPengeluaran').addEventListener('input', renderPengeluaran);
+document.getElementById('filterKategoriPengeluaran').addEventListener('change', renderPengeluaran);
+document.getElementById('btnTerapkanLaporan').addEventListener('click', renderLaporan);
+document.getElementById('btnPrintLaporan').addEventListener('click', () => { renderLaporan(); window.print(); });
+document.getElementById('searchPerencanaan').addEventListener('input', renderPerencanaan);
+document.getElementById('filterStatusPerencanaan').addEventListener('change', renderPerencanaan);
+
+/* =====================================================================
+   MODAL LOGIC
+   ===================================================================== */
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('[data-close]').forEach(btn => {
+  btn.addEventListener('click', () => closeModal(btn.dataset.close));
+});
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) closeModal(overlay.id); });
+});
+
+/* --- Pemasukan modal --- */
+document.getElementById('btnAddPemasukan').addEventListener('click', () => {
+  document.getElementById('modalPemasukanTitle').textContent = 'Tambah Pemasukan';
+  document.getElementById('pemasukanId').value = '';
+  document.getElementById('pemasukanProjectId').value = STATE.currentProject !== 'ALL' ? STATE.currentProject : (STATE.projects[0]?.id || '');
+  document.getElementById('pemasukanTanggal').value = todayISO();
+  document.getElementById('pemasukanJumlah').value = '';
+  document.getElementById('pemasukanSumber').value = '';
+  document.getElementById('pemasukanKategori').selectedIndex = 0;
+  document.getElementById('pemasukanKeterangan').value = '';
+  openModal('modalPemasukan');
+});
+document.getElementById('btnSavePemasukan').addEventListener('click', async () => {
+  const id = document.getElementById('pemasukanId').value;
+  const payload = {
+    id, projectId: document.getElementById('pemasukanProjectId').value,
+    tanggal: document.getElementById('pemasukanTanggal').value,
+    jumlah: document.getElementById('pemasukanJumlah').value,
+    sumber: document.getElementById('pemasukanSumber').value,
+    kategori: document.getElementById('pemasukanKategori').value,
+    keterangan: document.getElementById('pemasukanKeterangan').value
+  };
+  if(!payload.projectId || !payload.tanggal || !payload.jumlah || !payload.sumber){
+    showToast('error','Lengkapi semua field wajib.'); return;
+  }
+  if(STATE.isDemo){
+    if(id){
+      const idx = STATE.pemasukan.findIndex(x=>x.id===id);
+      STATE.pemasukan[idx] = payload;
+    } else {
+      payload.id = 'IN' + String(Date.now()).slice(-6);
+      STATE.pemasukan.push(payload);
+    }
+    closeModal('modalPemasukan'); renderAll(); showToast('success','Pemasukan tersimpan (mode demo).');
+    return;
+  }
+  const res = await apiPost(id ? 'updatePemasukan' : 'addPemasukan', payload);
+  if(res.success){
+    closeModal('modalPemasukan'); await loadAllData(); renderAll();
+    showToast('success','Pemasukan berhasil disimpan.');
+  } else {
+    showToast('error', res.message || 'Gagal menyimpan data.');
+  }
+});
+document.getElementById('tablePemasukan').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('.edit-pemasukan');
+  const delBtn = e.target.closest('.del-pemasukan');
+  if(editBtn){
+    const item = STATE.pemasukan.find(x=>x.id===editBtn.dataset.id);
+    if(!item) return;
+    document.getElementById('modalPemasukanTitle').textContent = 'Edit Pemasukan';
+    document.getElementById('pemasukanId').value = item.id;
+    document.getElementById('pemasukanProjectId').value = item.projectId;
+    document.getElementById('pemasukanTanggal').value = item.tanggal;
+    document.getElementById('pemasukanJumlah').value = item.jumlah;
+    document.getElementById('pemasukanSumber').value = item.sumber;
+    document.getElementById('pemasukanKategori').value = item.kategori;
+    document.getElementById('pemasukanKeterangan').value = item.keterangan || '';
+    openModal('modalPemasukan');
+  }
+  if(delBtn){
+    if(!confirm('Hapus data pemasukan ini?')) return;
+    const id = delBtn.dataset.id;
+    if(STATE.isDemo){
+      STATE.pemasukan = STATE.pemasukan.filter(x=>x.id!==id);
+      renderAll(); showToast('success','Data dihapus (mode demo).');
+      return;
+    }
+    const res = await apiPost('deletePemasukan', { id });
+    if(res.success){ await loadAllData(); renderAll(); showToast('success','Data berhasil dihapus.'); }
+    else showToast('error', res.message || 'Gagal menghapus data.');
+  }
+});
+
+/* --- Pengeluaran modal --- */
+document.getElementById('btnAddPengeluaran').addEventListener('click', () => {
+  document.getElementById('modalPengeluaranTitle').textContent = 'Tambah Pengeluaran';
+  document.getElementById('pengeluaranId').value = '';
+  document.getElementById('pengeluaranProjectId').value = STATE.currentProject !== 'ALL' ? STATE.currentProject : (STATE.projects[0]?.id || '');
+  document.getElementById('pengeluaranTanggal').value = todayISO();
+  document.getElementById('pengeluaranJumlah').value = '';
+  document.getElementById('pengeluaranDeskripsi').value = '';
+  document.getElementById('pengeluaranKategori').selectedIndex = 0;
+  document.getElementById('pengeluaranKeterangan').value = '';
+  openModal('modalPengeluaran');
+});
+document.getElementById('btnSavePengeluaran').addEventListener('click', async () => {
+  const id = document.getElementById('pengeluaranId').value;
+  const payload = {
+    id, projectId: document.getElementById('pengeluaranProjectId').value,
+    tanggal: document.getElementById('pengeluaranTanggal').value,
+    jumlah: document.getElementById('pengeluaranJumlah').value,
+    deskripsi: document.getElementById('pengeluaranDeskripsi').value,
+    kategori: document.getElementById('pengeluaranKategori').value,
+    keterangan: document.getElementById('pengeluaranKeterangan').value
+  };
+  if(!payload.projectId || !payload.tanggal || !payload.jumlah || !payload.deskripsi){
+    showToast('error','Lengkapi semua field wajib.'); return;
+  }
+  if(STATE.isDemo){
+    if(id){
+      const idx = STATE.pengeluaran.findIndex(x=>x.id===id);
+      STATE.pengeluaran[idx] = payload;
+    } else {
+      payload.id = 'EX' + String(Date.now()).slice(-6);
+      STATE.pengeluaran.push(payload);
+    }
+    closeModal('modalPengeluaran'); renderAll(); showToast('success','Pengeluaran tersimpan (mode demo).');
+    return;
+  }
+  const res = await apiPost(id ? 'updatePengeluaran' : 'addPengeluaran', payload);
+  if(res.success){
+    closeModal('modalPengeluaran'); await loadAllData(); renderAll();
+    showToast('success','Pengeluaran berhasil disimpan.');
+  } else {
+    showToast('error', res.message || 'Gagal menyimpan data.');
+  }
+});
+document.getElementById('tablePengeluaran').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('.edit-pengeluaran');
+  const delBtn = e.target.closest('.del-pengeluaran');
+  if(editBtn){
+    const item = STATE.pengeluaran.find(x=>x.id===editBtn.dataset.id);
+    if(!item) return;
+    document.getElementById('modalPengeluaranTitle').textContent = 'Edit Pengeluaran';
+    document.getElementById('pengeluaranId').value = item.id;
+    document.getElementById('pengeluaranProjectId').value = item.projectId;
+    document.getElementById('pengeluaranTanggal').value = item.tanggal;
+    document.getElementById('pengeluaranJumlah').value = item.jumlah;
+    document.getElementById('pengeluaranDeskripsi').value = item.deskripsi;
+    document.getElementById('pengeluaranKategori').value = item.kategori;
+    document.getElementById('pengeluaranKeterangan').value = item.keterangan || '';
+    openModal('modalPengeluaran');
+  }
+  if(delBtn){
+    if(!confirm('Hapus data pengeluaran ini?')) return;
+    const id = delBtn.dataset.id;
+    if(STATE.isDemo){
+      STATE.pengeluaran = STATE.pengeluaran.filter(x=>x.id!==id);
+      renderAll(); showToast('success','Data dihapus (mode demo).');
+      return;
+    }
+    const res = await apiPost('deletePengeluaran', { id });
+    if(res.success){ await loadAllData(); renderAll(); showToast('success','Data berhasil dihapus.'); }
+    else showToast('error', res.message || 'Gagal menghapus data.');
+  }
+});
+
+/* --- Project modal --- */
+document.getElementById('btnAddProject').addEventListener('click', () => {
+  document.getElementById('modalProjectTitle').textContent = 'Tambah Project';
+  document.getElementById('projectId').value = '';
+  document.getElementById('projectNama').value = '';
+  document.getElementById('projectClient').value = '';
+  document.getElementById('projectStatus').value = 'Berjalan';
+  document.getElementById('projectBudget').value = '';
+  document.getElementById('projectTanggalMulai').value = todayISO();
+  document.getElementById('projectTanggalSelesai').value = '';
+  openModal('modalProject');
+});
+document.getElementById('btnSaveProject').addEventListener('click', async () => {
+  const id = document.getElementById('projectId').value;
+  const payload = {
+    id, namaProject: document.getElementById('projectNama').value,
+    client: document.getElementById('projectClient').value,
+    status: document.getElementById('projectStatus').value,
+    budget: document.getElementById('projectBudget').value,
+    tanggalMulai: document.getElementById('projectTanggalMulai').value,
+    tanggalSelesai: document.getElementById('projectTanggalSelesai').value
+  };
+  if(!payload.namaProject || !payload.client){
+    showToast('error','Lengkapi nama project dan client.'); return;
+  }
+  if(STATE.isDemo){
+    if(id){
+      const idx = STATE.projects.findIndex(x=>x.id===id);
+      STATE.projects[idx] = payload;
+    } else {
+      payload.id = 'P' + String(Date.now()).slice(-4);
+      STATE.projects.push(payload);
+    }
+    closeModal('modalProject'); renderAll(); showToast('success','Project tersimpan (mode demo).');
+    return;
+  }
+  const res = await apiPost(id ? 'updateProject' : 'addProject', payload);
+  if(res.success){
+    closeModal('modalProject'); await loadAllData(); renderAll();
+    showToast('success','Project berhasil disimpan.');
+  } else {
+    showToast('error', res.message || 'Gagal menyimpan data.');
+  }
+});
+document.getElementById('tableProjects').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('.edit-project');
+  const delBtn = e.target.closest('.del-project');
+  if(editBtn){
+    const item = STATE.projects.find(x=>x.id===editBtn.dataset.id);
+    if(!item) return;
+    document.getElementById('modalProjectTitle').textContent = 'Edit Project';
+    document.getElementById('projectId').value = item.id;
+    document.getElementById('projectNama').value = item.namaProject;
+    document.getElementById('projectClient').value = item.client;
+    document.getElementById('projectStatus').value = item.status;
+    document.getElementById('projectBudget').value = item.budget;
+    document.getElementById('projectTanggalMulai').value = item.tanggalMulai;
+    document.getElementById('projectTanggalSelesai').value = item.tanggalSelesai || '';
+    openModal('modalProject');
+  }
+  if(delBtn){
+    if(!confirm('Hapus project ini? Data pemasukan/pengeluaran terkait TIDAK otomatis terhapus.')) return;
+    const id = delBtn.dataset.id;
+    if(STATE.isDemo){
+      STATE.projects = STATE.projects.filter(x=>x.id!==id);
+      renderAll(); showToast('success','Project dihapus (mode demo).');
+      return;
+    }
+    const res = await apiPost('deleteProject', { id });
+    if(res.success){ await loadAllData(); renderAll(); showToast('success','Project berhasil dihapus.'); }
+    else showToast('error', res.message || 'Gagal menghapus project.');
+  }
+});
+
+/* --- Perencanaan Project modal --- */
+document.getElementById('btnAddPerencanaan').addEventListener('click', () => {
+  document.getElementById('modalPerencanaanTitle').textContent = 'Tambah Rencana Project';
+  document.getElementById('perencanaanId').value = '';
+  document.getElementById('perencanaanNama').value = '';
+  document.getElementById('perencanaanClient').value = '';
+  document.getElementById('perencanaanTglPenawaran').value = todayISO();
+  document.getElementById('perencanaanNilaiKontrak').value = '';
+  document.getElementById('perencanaanEstimasiBiaya').value = '';
+  document.getElementById('perencanaanStatus').value = 'Rencana';
+  document.getElementById('perencanaanTanggalMulai').value = '';
+  updatePerencanaanEstimasiReadout();
+  openModal('modalPerencanaan');
+});
+document.getElementById('perencanaanNilaiKontrak').addEventListener('input', updatePerencanaanEstimasiReadout);
+document.getElementById('perencanaanEstimasiBiaya').addEventListener('input', updatePerencanaanEstimasiReadout);
+
+document.getElementById('btnSavePerencanaan').addEventListener('click', async () => {
+  const id = document.getElementById('perencanaanId').value;
+  const existing = id ? STATE.perencanaan.find(x=>x.id===id) : null;
+  const prevStatus = existing ? existing.status : null;
+
+  const kontrak = Number(document.getElementById('perencanaanNilaiKontrak').value) || 0;
+  const biaya = Number(document.getElementById('perencanaanEstimasiBiaya').value) || 0;
+
+  const payload = {
+    id,
+    namaProject: document.getElementById('perencanaanNama').value.trim(),
+    client: document.getElementById('perencanaanClient').value.trim(),
+    tglPenawaran: document.getElementById('perencanaanTglPenawaran').value,
+    nilaiKontrak: kontrak,
+    estimasiBiaya: biaya,
+    estimasiProfitRp: kontrak - biaya,
+    estimasiProfitPct: kontrak>0 ? ((kontrak-biaya)/kontrak*100) : 0,
+    status: document.getElementById('perencanaanStatus').value,
+    tanggalMulai: document.getElementById('perencanaanTanggalMulai').value,
+    linkedProjectId: existing ? (existing.linkedProjectId || '') : ''
+  };
+
+  if(!payload.namaProject || !payload.client || !payload.tglPenawaran){
+    showToast('error','Lengkapi Nama Project, Client, dan Tanggal Pengajuan Penawaran.'); return;
+  }
+  const justApproved = payload.status === 'Approve' && prevStatus !== 'Approve';
+  if(justApproved && !payload.tanggalMulai){
+    payload.tanggalMulai = todayISO();
+  }
+
+  if(STATE.isDemo){
+    if(id){
+      const idx = STATE.perencanaan.findIndex(x=>x.id===id);
+      STATE.perencanaan[idx] = payload;
+    } else {
+      payload.id = 'PL' + String(Date.now()).slice(-6);
+      STATE.perencanaan.push(payload);
+    }
+    if(justApproved){
+      applyApprovalLocally(payload);
+    }
+    closeModal('modalPerencanaan'); renderAll();
+    showToast('success', justApproved ? 'Rencana disetujui & otomatis masuk ke Project (mode demo).' : 'Rencana project tersimpan (mode demo).');
+    return;
+  }
+
+  // Backend Apps Script akan otomatis membuat Project + entri terkait
+  // saat status diset ke "Approve" (lihat action approvePerencanaan di Code.gs).
+  const action = id ? 'updatePerencanaan' : 'addPerencanaan';
+  const res = await apiPost(action, payload);
+  if(res.success){
+    closeModal('modalPerencanaan'); await loadAllData(); renderAll();
+    showToast('success', justApproved ? 'Rencana disetujui & otomatis masuk ke Project.' : 'Rencana project berhasil disimpan.');
+  } else {
+    showToast('error', res.message || 'Gagal menyimpan data.');
+  }
+});
+
+/* Mode demo: cerminkan approval ke STATE.projects secara lokal */
+function applyApprovalLocally(plan){
+  const project = buildProjectFromPlan(plan);
+  const idx = STATE.projects.findIndex(x=>x.id===project.id);
+  if(idx >= 0) STATE.projects[idx] = project;
+  else STATE.projects.push(project);
+  plan.linkedProjectId = project.id;
+  const pidx = STATE.perencanaan.findIndex(x=>x.id===plan.id);
+  if(pidx>=0) STATE.perencanaan[pidx] = plan;
+
+  if(toNumber(plan.nilaiKontrak) > 0){
+    STATE.pemasukan.push({
+      id:'IN' + String(Date.now()).slice(-6),
+      projectId: project.id,
+      tanggal: plan.tanggalMulai || todayISO(),
+      sumber: plan.client,
+      kategori: (STATE.settings.kategoriPemasukan && STATE.settings.kategoriPemasukan[0]) || 'Termin 1',
+      jumlah: toNumber(plan.nilaiKontrak),
+      keterangan: 'Nilai kontrak dari rencana project yang disetujui'
+    });
+  }
+}
+
+document.getElementById('tablePerencanaan').addEventListener('click', async (e) => {
+  const editBtn = e.target.closest('.edit-perencanaan');
+  const delBtn = e.target.closest('.del-perencanaan');
+  const approveBtn = e.target.closest('.approve-perencanaan');
+
+  if(editBtn){
+    const item = STATE.perencanaan.find(x=>x.id===editBtn.dataset.id);
+    if(!item) return;
+    document.getElementById('modalPerencanaanTitle').textContent = 'Edit Rencana Project';
+    document.getElementById('perencanaanId').value = item.id;
+    document.getElementById('perencanaanNama').value = item.namaProject;
+    document.getElementById('perencanaanClient').value = item.client;
+    document.getElementById('perencanaanTglPenawaran').value = item.tglPenawaran;
+    document.getElementById('perencanaanNilaiKontrak').value = item.nilaiKontrak;
+    document.getElementById('perencanaanEstimasiBiaya').value = item.estimasiBiaya;
+    document.getElementById('perencanaanStatus').value = item.status;
+    document.getElementById('perencanaanTanggalMulai').value = item.tanggalMulai || '';
+    updatePerencanaanEstimasiReadout();
+    openModal('modalPerencanaan');
+  }
+
+  if(delBtn && !delBtn.disabled){
+    if(!confirm('Hapus rencana project ini?')) return;
+    const id = delBtn.dataset.id;
+    if(STATE.isDemo){
+      STATE.perencanaan = STATE.perencanaan.filter(x=>x.id!==id);
+      renderAll(); showToast('success','Rencana dihapus (mode demo).');
+      return;
+    }
+    const res = await apiPost('deletePerencanaan', { id });
+    if(res.success){ await loadAllData(); renderAll(); showToast('success','Rencana berhasil dihapus.'); }
+    else showToast('error', res.message || 'Gagal menghapus rencana.');
+  }
+});
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+(async function init(){
+  const loader = document.getElementById('loaderOverlay');
+  try{
+    const startDefault = new Date(); startDefault.setMonth(startDefault.getMonth()-3);
+    document.getElementById('laporanStart').value = startDefault.toISOString().slice(0,10);
+    document.getElementById('laporanEnd').value = todayISO();
+
+    await loadAllData();
+    renderAll();
+  } catch(err){
+    console.error('Gagal inisialisasi aplikasi:', err);
+    const loaderText = document.querySelector('.loader-text');
+    if(loaderText){
+      loaderText.textContent = 'TERJADI KESALAHAN SAAT MEMUAT';
+      loaderText.style.color = 'var(--accent-red)';
+      const detail = document.createElement('div');
+      detail.style.cssText = 'max-width:520px; text-align:center; font-size:11px; color:var(--text-tertiary); margin-top:8px; font-family:var(--font-mono); padding:0 20px; word-break:break-word;';
+      detail.textContent = String(err && err.message || err);
+      loaderText.parentNode.appendChild(detail);
+    }
+    return; // biarkan loader tampil dengan pesan error, jangan disembunyikan
+  }
+  loader.style.opacity = '0';
+  setTimeout(()=> loader.style.display='none', 400);
+})();
+</script>
+</body>
+</html>
