@@ -285,11 +285,14 @@ tbody td{ padding:13px 16px; border-bottom:1px solid var(--border-soft); color:v
 tbody tr:last-child td{ border-bottom:none; }
 tbody tr{ transition:background .12s ease; }
 tbody tr:hover{ background:rgba(0,229,255,.03); }
-td.num{ font-family:var(--font-mono); color:var(--text-primary); text-align:right; font-weight:500; }
+tbody td:first-child{ white-space:nowrap; }
+td.num{ font-family:var(--font-mono); color:var(--text-primary); text-align:right; font-weight:500; white-space:nowrap; }
+td.nowrap-cell{ white-space:nowrap; }
 td.strong{ color:var(--text-primary); font-weight:600; }
 .tag{
   display:inline-flex; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;
   background:rgba(0,229,255,.1); color:var(--accent-cyan); border:1px solid rgba(0,229,255,.2);
+  white-space:nowrap;
 }
 .tag.green{ background:rgba(0,230,168,.1); color:var(--accent-green); border-color:rgba(0,230,168,.2); }
 .tag.red{ background:rgba(255,77,109,.1); color:var(--accent-red); border-color:rgba(255,77,109,.2); }
@@ -497,15 +500,16 @@ td.strong{ color:var(--text-primary); font-weight:600; }
   thead{ display:table-header-group; } /* ulangi header tabel di tiap halaman cetak */
   tr{ page-break-inside:avoid; }
   th{
-    background:#111629 !important; color:#fff !important; font-size:10px !important;
+    background:#111629 !important; color:#fff !important; font-size:9px !important;
     padding:8px 10px !important; -webkit-print-color-adjust:exact; print-color-adjust:exact;
   }
   td{
-    color:#1a1a1a !important; font-size:11px !important; padding:7px 10px !important;
+    color:#1a1a1a !important; font-size:9px !important; padding:7px 10px !important;
     border-bottom:1px solid #e2e4ec !important;
   }
-  td.num{ color:#1a1a1a !important; }
-  .tag{ border:1px solid #999 !important; color:#333 !important; background:transparent !important; }
+  td.num{ color:#1a1a1a !important; white-space:nowrap !important; }
+  td:first-child{ white-space:nowrap !important; }
+  .tag{ border:1px solid #999 !important; color:#333 !important; background:transparent !important; font-size:9px !important; padding:2px 8px !important; }
 
   a[href]:after{ content:""; }
 }
@@ -1317,6 +1321,15 @@ function formatDateID(d){
   if(isNaN(date)) return d;
   return date.toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' });
 }
+function formatDateShort(d){
+  if(!d) return '-';
+  const date = new Date(d);
+  if(isNaN(date)) return d;
+  const dd = String(date.getDate()).padStart(2,'0');
+  const mm = String(date.getMonth()+1).padStart(2,'0');
+  const yyyy = date.getFullYear();
+  return `${dd}-${mm}-${yyyy}`;
+}
 function projectName(id){
   const p = STATE.projects.find(x => x.id === id);
   return p ? p.namaProject : id;
@@ -1700,11 +1713,11 @@ function renderLaporan(){
     empty.style.display = 'none';
     tbody.innerHTML = combined.map(x => `
       <tr>
-        <td>${formatDateID(x.tanggal)}</td>
+        <td>${formatDateShort(x.tanggal)}</td>
         <td><span class="tag ${x.tipe==='Pemasukan'?'green':'red'}">${x.tipe}</span></td>
         <td class="strong">${escapeHTML(projectName(x.projectId))}</td>
         <td>${escapeHTML(x.deskripsi||'-')}</td>
-        <td>${escapeHTML(x.kategori||'-')}</td>
+        <td class="nowrap-cell">${escapeHTML(x.kategori||'-')}</td>
         <td class="num" style="color:${x.tipe==='Pemasukan'?'var(--accent-green)':'var(--accent-red)'};">${x.tipe==='Pemasukan'?'+':'-'} ${formatRupiah(x.jumlah)}</td>
       </tr>
     `).join('');
