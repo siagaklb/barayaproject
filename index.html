@@ -289,10 +289,13 @@ tbody td{ padding:13px 16px; border-bottom:1px solid var(--border-soft); color:v
 tbody tr:last-child td{ border-bottom:none; }
 tbody tr{ transition:background .12s ease; }
 tbody tr:hover{ background:rgba(0,229,255,.03); }
-tbody td:first-child{ white-space:nowrap; }
+tbody td:first-child{ white-space:normal; }
 td.num{ font-family:var(--font-mono); color:var(--text-primary); text-align:right; font-weight:500; white-space:nowrap; }
 td.nowrap-cell{ white-space:nowrap; }
-td.strong{ color:var(--text-primary); font-weight:600; font-size:inherit; max-width:260px; white-space:normal; word-break:break-word; }
+td.strong{ color:var(--text-primary); font-weight:600; font-size:inherit; max-width:260px; white-space:normal; word-break:break-word; overflow-wrap:break-word; }
+.table-plan{ table-layout:fixed; min-width:760px; }
+.table-plan th:nth-child(1), .table-plan td:nth-child(1){ width:220px; white-space:normal; word-break:break-word; overflow-wrap:break-word; }
+.table-plan th:nth-child(2), .table-plan td:nth-child(2){ width:140px; white-space:normal; word-break:break-word; overflow-wrap:break-word; }
 .tag{
   display:inline-flex; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600;
   background:rgba(0,229,255,.1); color:var(--accent-cyan); border:1px solid rgba(0,229,255,.2);
@@ -910,7 +913,7 @@ td.strong{ color:var(--text-primary); font-weight:600; font-size:inherit; max-wi
             </select>
           </div>
           <div class="table-wrap">
-            <table>
+            <table class="table-plan">
               <thead>
                 <tr>
                   <th>Nama Project</th><th>Client</th><th>Tgl Penawaran</th>
