@@ -1653,9 +1653,9 @@ function renderAnalisa(){
   } else {
     budgetList.innerHTML = budgetData.map(b => `
       <div>
-        <div style="display:flex; justify-content:space-between; margin-bottom:7px; font-size:13px;">
-          <span style="font-weight:600; color:var(--text-primary);">${escapeHTML(b.name)}</span>
-          <span style="font-family:var(--font-mono); color:${b.pct>90?'var(--accent-red)':'var(--text-secondary)'};">${formatRupiah(b.used)} / ${formatRupiah(b.budget)} (${b.pct.toFixed(1)}%)</span>
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 12px; margin-bottom:7px; font-size:13px;">
+          <span style="font-weight:600; color:var(--text-primary); min-width:0;">${escapeHTML(b.name)}</span>
+          <span style="font-family:var(--font-mono); color:${b.pct>90?'var(--accent-red)':'var(--text-secondary)'}; white-space:nowrap; flex-shrink:0;">${formatRupiah(b.used)} / ${formatRupiah(b.budget)} (${b.pct.toFixed(1)}%)</span>
         </div>
         <div class="progress-track"><div class="progress-fill ${b.pct>90?'warn':''}" style="width:${Math.min(b.pct,100)}%;"></div></div>
       </div>
