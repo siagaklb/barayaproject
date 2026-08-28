@@ -1,12 +1,15 @@
 // BARAYA PROJECT — Service Worker
 // Cache-first untuk shell aplikasi, agar bisa dibuka walau offline / sinyal lemah.
 
-const CACHE_NAME = 'baraya-finance-v1';
+const CACHE_NAME = 'baraya-finance-v2';
 const CORE_ASSETS = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './icon-512-maskable.png',
+  './apple-touch-icon.png',
+  './brand-mark.png'
 ];
 
 self.addEventListener('install', (event) => {
