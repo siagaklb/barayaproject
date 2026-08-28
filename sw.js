@@ -1,4 +1,4 @@
-// BARAYA FINANCE — Service Worker
+// BARAYA PROJECT — Service Worker
 // Cache-first untuk shell aplikasi, agar bisa dibuka walau offline / sinyal lemah.
 
 const CACHE_NAME = 'baraya-finance-v1';
